@@ -8,6 +8,7 @@ import smtplib
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.utils import formatdate
 
 SMTPSERVER = os.environ.get('SMTP_SERVER', 'localhost')
 SMTPUSER = os.environ.get('SMTP_USER', '')
@@ -66,6 +67,7 @@ def main():
     msg['Subject'] = args.subject
     msg['From'] = MAIL_FROM + '@canonical.com'
     msg['To'] = args.to
+    msg['Date'] = formatdate(localtime=True)
 
     s = smtplib.SMTP(SMTPSERVER)
     if SMTPUSER:
