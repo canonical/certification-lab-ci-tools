@@ -38,6 +38,8 @@ elif [ -z "$TOOLS_PATH" ]; then
     exit 1
 fi
 
+set -e
+
 # clone Checkbox repo
 git clone --filter=tree:0 https://github.com/canonical/checkbox.git > /dev/null
 
