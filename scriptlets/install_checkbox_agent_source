@@ -42,8 +42,7 @@ fi
 git clone --filter=tree:0 https://github.com/canonical/checkbox.git > /dev/null
 
 # checkout commit to match the required version
-$TOOLS_PATH/version-published/checkout_to_version.py ~/checkbox "$VERSION"
+$TOOLS_PATH/version-published/checkout_to_version.py checkbox/ "$VERSION"
 
 CHECKBOX_SOURCE_INSTALL_GROUP=${CHECKBOX_SOURCE_INSTALL_GROUP:-$(lsb_release -cs)_prod}
 pipx install checkbox/checkbox-ng[$CHECKBOX_SOURCE_INSTALL_GROUP]
-rm -rf checkbox
