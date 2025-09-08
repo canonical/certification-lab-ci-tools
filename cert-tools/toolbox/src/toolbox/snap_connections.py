@@ -17,9 +17,11 @@ grep -o '{.*}'
 from argparse import ArgumentParser
 from collections import defaultdict
 import json
+from pathlib import Path
 import re
 import sys
 from typing import Callable, Dict, List, NamedTuple, Optional, Set
+import yaml
 
 
 # dicts that describe snap plugs and slots
@@ -77,7 +79,7 @@ class Connection(NamedTuple):
             plug_snap=plug["snap"],
             plug_name=plug["plug"],
             slot_snap=slot["snap"],
-            slot_name=slot["slot"]
+            slot_name=slot["slot"],
         )
 
     @classmethod
@@ -85,24 +87,19 @@ class Connection(NamedTuple):
         match = re.match(
             r"^(?P<plug_snap>[\w-]+):(?P<plug_name>[\w-]+)"
             r"/(?P<slot_snap>[\w-]*):(?P<slot_name>[\w-]+)$",
-            string
+            string,
         )
         if not match:
-            raise ValueError(
-                f"'{string}' cannot be converted to a snap connection"
-            )
+            raise ValueError(f"'{string}' cannot be converted to a snap connection")
         return cls(
             plug_snap=match.group("plug_snap"),
             plug_name=match.group("plug_name"),
             slot_snap=match.group("slot_snap") or "snapd",
-            slot_name=match.group("slot_name")
+            slot_name=match.group("slot_name"),
         )
 
     def __str__(self):
-        return (
-            f"{self.plug_snap}:{self.plug_name}/"
-            f"{self.slot_snap}:{self.slot_name}"
-        )
+        return f"{self.plug_snap}:{self.plug_name}/{self.slot_snap}:{self.slot_name}"
 
 
 # any callable that processes a plug-to-dict connection and accepts/rejects it
@@ -110,7 +107,6 @@ ConnectionPredicate = Callable[[PlugDict, SlotDict], bool]
 
 
 class Connector:
-
     def __init__(self, predicates: Optional[List[ConnectionPredicate]] = None):
         # specify the predicate functions that will be used to select or
         # filter out possible connections between plus and slots
@@ -118,7 +114,7 @@ class Connector:
             # select connections where the interface attributes match
             self.matching_attributes,
             # select connections only on different snaps
-            lambda plug, slot: plug["snap"] != slot["snap"]
+            lambda plug, slot: plug["snap"] != slot["snap"],
         ]
         # additional user-provided filtering predicates
         if predicates:
@@ -186,16 +182,54 @@ class Connector:
         }
 
 
+class Blacklist:
+    def __init__(self, blacklist: list[Connection]):
+        self.blacklist = blacklist
+
+    @staticmethod
+    def extract_connections(blacklist_data: dict) -> list[Connection]:
+        return [
+            Connection(
+                plug_snap=entry.get("plug_snap"),
+                plug_name=entry.get("plug_name"),
+                slot_snap=entry.get("slot_snap"),
+                slot_name=entry.get("slot_name"),
+            )
+            for item in blacklist_data["items"]
+            for entry in item["match"]
+        ]
+
+    @classmethod
+    def from_file(cls, path: Path) -> "Blacklist":
+        with open(path) as file:
+            blacklist_data = yaml.safe_load(file)
+            return cls(cls.extract_connections(blacklist_data))
+
+    def is_allowed(self, plug: PlugDict, slot: SlotDict) -> bool:
+        return not any(
+            (entry.plug_snap is None or entry.plug_snap == plug["snap"])
+            and (entry.plug_name is None or entry.plug_name == plug["plug"])
+            and (entry.slot_snap is None or entry.slot_snap == slot["snap"])
+            and (entry.slot_name is None or entry.slot_name == slot["slot"])
+            for entry in self.blacklist
+        )
+
+
 def main(args: Optional[List[str]] = None):
     parser = ArgumentParser()
     parser.add_argument(
-        "snaps", nargs='+', type=str,
-        help='Connect plugs for these snaps to slots on matching interfaces'
+        "snaps",
+        nargs="+",
+        type=str,
+        help="Connect plugs for these snaps to slots on matching interfaces",
     )
     parser.add_argument(
-        '--force', nargs='+', type=Connection.from_string,
-        help='Force additional connections'
+        "--force",
+        nargs="+",
+        type=Connection.from_string,
+        help="Force additional connections",
     )
+    parser.add_argument("--blacklist", type=Path, help="Blacklist connections")
     args = parser.parse_args(args)
 
     # parse standard input as JSON
@@ -204,7 +238,12 @@ def main(args: Optional[List[str]] = None):
     # create a predicate function for the provided snaps
     def snap_select(plug: PlugDict, _) -> bool:
         return plug["snap"] in set(args.snaps)
+
     predicates = [snap_select]
+
+    if args.blacklist:
+        predicates.append(Blacklist.from_file(args.blacklist).is_allowed)
+
     connector = Connector(predicates)
 
     snap_connections = connector.process(snap_connection_data)
