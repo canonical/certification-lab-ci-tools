@@ -8,7 +8,14 @@ from unittest.mock import patch
 
 # Import the module
 from toolbox import snap_connections
-from toolbox.snap_connections import Connection, Connector, Blacklist
+from toolbox.snap_connections import (
+    Connection,
+    Predicate,
+    Connector,
+    Blacklist,
+    MatchAttributes,
+    PredicateCheckResult,
+)
 
 
 class TestConnection:
@@ -71,16 +78,16 @@ class TestConnection:
         )
 
 
-class TestConnector:
+class TestPredicates:
     def test_matching_attributes_no_attrs(self):
         plug = {"interface": "test"}
         slot = {"interface": "test"}
-        assert Connector.matching_attributes(plug, slot)
+        assert MatchAttributes.check(plug, slot)
 
     def test_matching_attributes_no_common_attrs(self):
         plug = {"interface": "content", "attrs": {"attr1": "value1"}}
         slot = {"interface": "content", "attrs": {"attr2": "value2"}}
-        assert Connector.matching_attributes(plug, slot)
+        assert MatchAttributes.check(plug, slot)
 
     def test_matching_attributes_matching_attrs(self):
         plug = {
@@ -91,13 +98,15 @@ class TestConnector:
             "interface": "content",
             "attrs": {"content": "graphics-core22", "other": "data"},
         }
-        assert Connector.matching_attributes(plug, slot)
+        assert MatchAttributes.check(plug, slot)
 
     def test_matching_attributes_non_matching_attrs(self):
         plug = {"interface": "content", "attrs": {"content": "graphics-core22"}}
         slot = {"interface": "content", "attrs": {"content": "different-value"}}
-        assert not Connector.matching_attributes(plug, slot)
+        assert not MatchAttributes.check(plug, slot)
 
+
+class TestConnector:
     def test_init_default_predicates(self):
         connector = Connector()
         assert len(connector.predicates) == 2
@@ -172,11 +181,14 @@ class TestConnector:
             }
         }
 
-        # Only allow connections from "allowed-snap"
-        def predicate(plug, slot):
-            return plug["snap"] == "allowed-snap"
+        class AllowRestrictedSnap(Predicate):
+            # Only allow connections from "allowed-snap"
 
-        connector = Connector(predicates=[predicate])
+            @staticmethod
+            def check(plug, slot) -> PredicateCheckResult:
+                return PredicateCheckResult(plug["snap"] == "allowed-snap")
+
+        connector = Connector(predicates=[AllowRestrictedSnap])
         connections = connector.process(data)
 
         # Should only find one connection from allowed-snap
@@ -446,9 +458,9 @@ class TestBlacklist:
             ),
         ],
     )
-    def test_is_allowed(self, connections, plug, slot, expected_allowed):
+    def test_blacklist_predicate(self, connections, plug, slot, expected_allowed):
         blacklist = Blacklist(connections)
-        assert blacklist.is_allowed(plug, slot) == expected_allowed
+        assert blacklist.check(plug, slot).result == expected_allowed
 
 
 class TestMainFunction:

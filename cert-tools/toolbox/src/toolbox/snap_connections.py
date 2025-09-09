@@ -14,15 +14,18 @@ grep -o '{.*}'
 ```
 """
 
+from abc import ABC, abstractmethod
 from argparse import ArgumentParser
 from collections import defaultdict
 import json
+from logging import getLogger
 from pathlib import Path
 import re
 import sys
-from typing import Callable, Dict, List, NamedTuple, Optional, Set
+from typing import Dict, List, NamedTuple, Optional, Set
 import yaml
 
+logger = getLogger(__name__)
 
 # dicts that describe snap plugs and slots
 # (they follow the schema of the snapd API `connections` endpoint)
@@ -102,26 +105,31 @@ class Connection(NamedTuple):
         return f"{self.plug_snap}:{self.plug_name}/{self.slot_snap}:{self.slot_name}"
 
 
-# any callable that processes a plug-to-dict connection and accepts/rejects it
-ConnectionPredicate = Callable[[PlugDict, SlotDict], bool]
+class PredicateCheckResult(NamedTuple):
+    """
+    Contains the result of a connection predicate test, along with a possible
+    message explaining the result.
+    """
+    result: bool
+    message: str | None = None
+
+    def __bool__(self) -> bool:
+        return self.result
 
 
-class Connector:
-    def __init__(self, predicates: Optional[List[ConnectionPredicate]] = None):
-        # specify the predicate functions that will be used to select or
-        # filter out possible connections between plus and slots
-        self.predicates = [
-            # select connections where the interface attributes match
-            self.matching_attributes,
-            # select connections only on different snaps
-            lambda plug, slot: plug["snap"] != slot["snap"],
-        ]
-        # additional user-provided filtering predicates
-        if predicates:
-            self.predicates.extend(predicates)
+class Predicate(ABC):
+    @abstractmethod
+    def check(self, plug: PlugDict, slot: SlotDict) -> PredicateCheckResult:
+        """
+        Return a PredicateCheckResult which is True if the plug and slot
+        should be connected or False otherwise.
+        """
+        raise NotImplementedError
 
+
+class MatchAttributes(Predicate):
     @staticmethod
-    def matching_attributes(plug: PlugDict, slot: SlotDict) -> bool:
+    def check(plug: PlugDict, slot: SlotDict) -> PredicateCheckResult:
         """
         Return True if the (common) attributes of a plug and slot match, or
         if there are no common attributes and return False otherwise.
@@ -147,12 +155,82 @@ class Connector:
             plug_attributes = plug["attrs"]
             slot_attributes = slot["attrs"]
         except KeyError:
-            return True
+            return PredicateCheckResult(True)
         common_attributes = set(plug_attributes.keys()) & set(slot_attributes.keys())
-        return all(
-            plug_attributes[attribute] == slot_attributes[attribute]
-            for attribute in common_attributes
+        return PredicateCheckResult(
+            all(
+                plug_attributes[attribute] == slot_attributes[attribute]
+                for attribute in common_attributes
+            )
         )
+
+
+class DifferentSnaps(Predicate):
+    """Only select connections between different snaps."""
+    @staticmethod
+    def check(plug: PlugDict, slot: SlotDict) -> PredicateCheckResult:
+        return PredicateCheckResult(plug["snap"] != slot["snap"])
+
+
+class SelectSnaps(Predicate):
+    """Only select connections plugging specific snaps."""
+    def __init__(self, snaps: list[str]):
+        self.snaps = set(snaps)
+
+    def check(self, plug: PlugDict, slot: SlotDict) -> PredicateCheckResult:
+        return PredicateCheckResult(plug["snap"] in self.snaps)
+
+
+class Blacklist(Predicate):
+    """Only select connections that haven't been blacklisted."""
+    def __init__(self, blacklist: list[Connection]):
+        self.blacklist = blacklist
+
+    @classmethod
+    def from_dict(cls, blacklist_data: dict) -> "Blacklist":
+        return cls(
+            [
+                Connection(
+                    plug_snap=entry.get("plug_snap"),
+                    plug_name=entry.get("plug_name"),
+                    slot_snap=entry.get("slot_snap"),
+                    slot_name=entry.get("slot_name"),
+                )
+                for item in blacklist_data["items"]
+                for entry in item["match"]
+            ]
+        )
+
+    @classmethod
+    def from_file(cls, path: Path) -> "Blacklist":
+        with open(path) as file:
+            blacklist_data = yaml.safe_load(file)
+            return cls.from_dict(blacklist_data)
+
+    def check(self, plug: PlugDict, slot: SlotDict) -> PredicateCheckResult:
+        result = not any(
+            (entry.plug_snap is None or entry.plug_snap == plug["snap"])
+            and (entry.plug_name is None or entry.plug_name == plug["plug"])
+            and (entry.slot_snap is None or entry.slot_snap == slot["snap"])
+            and (entry.slot_name is None or entry.slot_name == slot["slot"])
+            for entry in self.blacklist
+        )
+        message = (
+            None
+            if result
+            else f"Connection '{Connection.from_dicts(plug, slot)}' is blacklisted"
+        )
+        return PredicateCheckResult(result, message)
+
+
+class Connector:
+    def __init__(self, predicates: Optional[List[Predicate]] = None):
+        # specify the predicate functions that will be used by default
+        # to select or filter out possible connections between plus and slots
+        self.predicates = [MatchAttributes, DifferentSnaps]
+        # additional user-provided filtering predicates
+        if predicates:
+            self.predicates.extend(predicates)
 
     def process(self, snap_connection_data) -> Set[Connection]:
         """
@@ -173,46 +251,19 @@ class Connector:
 
         # iterate over all slots and check for plugs that satisfy all the
         # filtering predicates to form the set of possible connections
-        return {
-            Connection.from_dicts(plug, slot)
-            for slot in snap_connection_data["result"]["slots"]
-            if (interface := slot["interface"]) in interface_plugs
-            for plug in interface_plugs[interface]
-            if all(predicate(plug, slot) for predicate in self.predicates)
-        }
-
-
-class Blacklist:
-    def __init__(self, blacklist: list[Connection]):
-        self.blacklist = blacklist
-
-    @staticmethod
-    def extract_connections(blacklist_data: dict) -> list[Connection]:
-        return [
-            Connection(
-                plug_snap=entry.get("plug_snap"),
-                plug_name=entry.get("plug_name"),
-                slot_snap=entry.get("slot_snap"),
-                slot_name=entry.get("slot_name"),
-            )
-            for item in blacklist_data["items"]
-            for entry in item["match"]
-        ]
-
-    @classmethod
-    def from_file(cls, path: Path) -> "Blacklist":
-        with open(path) as file:
-            blacklist_data = yaml.safe_load(file)
-            return cls(cls.extract_connections(blacklist_data))
-
-    def is_allowed(self, plug: PlugDict, slot: SlotDict) -> bool:
-        return not any(
-            (entry.plug_snap is None or entry.plug_snap == plug["snap"])
-            and (entry.plug_name is None or entry.plug_name == plug["plug"])
-            and (entry.slot_snap is None or entry.slot_snap == slot["snap"])
-            and (entry.slot_name is None or entry.slot_name == slot["slot"])
-            for entry in self.blacklist
-        )
+        connections = set()
+        for slot in snap_connection_data["result"]["slots"]:
+            if (interface := slot["interface"]) in interface_plugs:
+                for plug in interface_plugs[interface]:
+                    results, messages = zip(
+                        *(predicate.check(plug, slot) for predicate in self.predicates)
+                    )
+                    if all(results):
+                        connections.add(Connection.from_dicts(plug, slot))
+                    for message in messages:
+                        if message:
+                            logger.info(message)
+        return connections
 
 
 def main(args: Optional[List[str]] = None):
@@ -235,14 +286,10 @@ def main(args: Optional[List[str]] = None):
     # parse standard input as JSON
     snap_connection_data = json.load(sys.stdin)
 
-    # create a predicate function for the provided snaps
-    def snap_select(plug: PlugDict, _) -> bool:
-        return plug["snap"] in set(args.snaps)
-
-    predicates = [snap_select]
-
+    # determine additional connection predicates from arguments
+    predicates = [SelectSnaps(args.snaps)]
     if args.blacklist:
-        predicates.append(Blacklist.from_file(args.blacklist).is_allowed)
+        predicates.append(Blacklist.from_file(args.blacklist))
 
     connector = Connector(predicates)
 
