@@ -110,6 +110,7 @@ class PredicateCheckResult(NamedTuple):
     Contains the result of a connection predicate test, along with a possible
     message explaining the result.
     """
+
     result: bool
     message: str | None = None
 
@@ -167,6 +168,7 @@ class MatchAttributes(Predicate):
 
 class DifferentSnaps(Predicate):
     """Only select connections between different snaps."""
+
     @staticmethod
     def check(plug: PlugDict, slot: SlotDict) -> PredicateCheckResult:
         return PredicateCheckResult(plug["snap"] != slot["snap"])
@@ -174,7 +176,8 @@ class DifferentSnaps(Predicate):
 
 class SelectSnaps(Predicate):
     """Only select connections plugging specific snaps."""
-    def __init__(self, snaps: list[str]):
+
+    def __init__(self, snaps: List[str]):
         self.snaps = set(snaps)
 
     def check(self, plug: PlugDict, slot: SlotDict) -> PredicateCheckResult:
@@ -183,7 +186,8 @@ class SelectSnaps(Predicate):
 
 class Blacklist(Predicate):
     """Only select connections that haven't been blacklisted."""
-    def __init__(self, blacklist: list[Connection]):
+
+    def __init__(self, blacklist: List[Connection]):
         self.blacklist = blacklist
 
     @classmethod
