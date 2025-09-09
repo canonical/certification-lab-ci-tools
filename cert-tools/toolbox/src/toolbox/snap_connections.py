@@ -18,14 +18,16 @@ from abc import ABC, abstractmethod
 from argparse import ArgumentParser
 from collections import defaultdict
 import json
-from logging import getLogger
+import logging
 from pathlib import Path
 import re
 import sys
 from typing import Dict, List, NamedTuple, Optional, Set
 import yaml
 
-logger = getLogger(__name__)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logger.addHandler(logging.StreamHandler())
 
 # dicts that describe snap plugs and slots
 # (they follow the schema of the snapd API `connections` endpoint)
@@ -284,7 +286,9 @@ def main(args: Optional[List[str]] = None):
         type=Connection.from_string,
         help="Force additional connections",
     )
-    parser.add_argument("--blacklist", type=Path, help="Path to the connections blacklist")
+    parser.add_argument(
+        "--blacklist", type=Path, help="Path to the connections blacklist"
+    )
     parser.add_argument(
         "--output", type=Path, help="Output file path (default: stdout)"
     )

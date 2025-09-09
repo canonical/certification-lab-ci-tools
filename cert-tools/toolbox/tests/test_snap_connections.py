@@ -4,6 +4,7 @@ from io import StringIO
 from pathlib import Path
 from textwrap import dedent
 from unittest.mock import patch, mock_open
+import logging
 
 # Import the module
 from toolbox import snap_connections
@@ -681,3 +682,56 @@ class TestMainFunction:
         # Check the output - should exclude blocked-plug connections
         assert "test-snap:allowed-plug/slot-snap:slot-name" in output
         assert "blocked-plug" not in output
+
+    def test_blacklist_logging_messages(self, caplog):
+        """Test that blacklisted connections generate log messages."""
+        # Setup test data with connections that will be blacklisted
+        data = {
+            "result": {
+                "plugs": [
+                    {
+                        "snap": "allowed-snap",
+                        "plug": "allowed-plug",
+                        "interface": "interface",
+                    },
+                    {
+                        "snap": "blacklisted-snap",
+                        "plug": "blacklisted-plug",
+                        "interface": "interface",
+                    },
+                ],
+                "slots": [
+                    {"snap": "slot-snap", "slot": "slot-name", "interface": "interface"}
+                ],
+            }
+        }
+
+        # Create blacklist that blocks the second connection
+        blacklist = Blacklist(
+            [
+                Connection(
+                    "blacklisted-snap", "blacklisted-plug", "slot-snap", "slot-name"
+                )
+            ]
+        )
+
+        # Create connector with blacklist predicate
+        connector = Connector(predicates=[blacklist])
+
+        # Capture log messages at INFO level
+        with caplog.at_level(logging.INFO):
+            connections = connector.process(data)
+
+        # Verify only the allowed connection was returned
+        assert len(connections) == 1
+        connection = list(connections)[0]
+        assert connection.plug_snap == "allowed-snap"
+
+        # Verify the blacklist log message was generated
+        assert len(caplog.records) == 1
+        log_message = caplog.records[0].message
+        assert (
+            "Connection 'blacklisted-snap:blacklisted-plug/slot-snap:slot-name' is blacklisted"
+            in log_message
+        )
+        assert caplog.records[0].levelname == "INFO"
