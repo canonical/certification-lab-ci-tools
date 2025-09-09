@@ -112,7 +112,7 @@ class PredicateCheckResult(NamedTuple):
     """
 
     result: bool
-    message: str | None = None
+    message: Optional[str] = None
 
     def __bool__(self) -> bool:
         return self.result
