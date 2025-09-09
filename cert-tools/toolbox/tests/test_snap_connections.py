@@ -1,10 +1,8 @@
 import json
 import pytest
 from io import StringIO
-from pathlib import Path
-from tempfile import NamedTemporaryFile
 from textwrap import dedent
-from unittest.mock import patch
+from unittest.mock import patch, mock_open
 
 # Import the module
 from toolbox import snap_connections
@@ -335,7 +333,7 @@ class TestBlacklist:
         ],
     )
     def test_extract_connections(self, blacklist_data, expected_connections):
-        connections = Blacklist.extract_connections(blacklist_data)
+        connections = Blacklist.from_dict(blacklist_data).blacklist
         assert connections == expected_connections
 
     @pytest.mark.parametrize(
@@ -522,9 +520,21 @@ class TestMainFunction:
         output = mock_stdout.getvalue().strip()
         assert output == "plug-snap:plug/slot-snap:slot"
 
+    @patch(
+        "builtins.open",
+        new_callable=mock_open,
+        read_data=dedent("""
+            items:
+              - match:
+                - plug_snap: blacklisted-snap
+                  plug_name: blacklisted-plug
+                  slot_snap: slot-snap
+                  slot_name: slot-name
+            """),
+    )
     @patch("sys.stdin")
     @patch("sys.stdout", new_callable=StringIO)
-    def test_main_with_blacklist_option(self, mock_stdout, mock_stdin):
+    def test_main_with_blacklist_option(self, mock_stdout, mock_stdin, mock_file):
         # Prepare mock input data
         mock_data = {
             "result": {
@@ -547,38 +557,36 @@ class TestMainFunction:
         }
         mock_stdin.read.return_value = json.dumps(mock_data)
 
-        # Create temporary blacklist file
-        blacklist_content = dedent("""
+        test_args = [
+            "allowed-snap",
+            "blacklisted-snap",
+            "--blacklist",
+            "fake_blacklist.yaml",
+        ]
+        snap_connections.main(test_args)
+
+        # Check the output - should only include allowed connections
+        output = mock_stdout.getvalue().strip()
+        assert "allowed-snap:allowed-plug/slot-snap:slot-name" in output
+        assert "blacklisted-snap:blacklisted-plug/slot-snap:slot-name" not in output
+
+    @patch(
+        "builtins.open",
+        new_callable=mock_open,
+        read_data=dedent("""
             items:
               - match:
-                - plug_snap: blacklisted-snap
-                  plug_name: blacklisted-plug
-                  slot_snap: slot-snap
-                  slot_name: slot-name
-            """)
-        with NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as temp_file:
-            temp_file.write(blacklist_content)
-            temp_file_path = Path(temp_file.name)
-
-        try:
-            test_args = [
-                "allowed-snap",
-                "blacklisted-snap",
-                "--blacklist",
-                str(temp_file_path),
-            ]
-            snap_connections.main(test_args)
-
-            # Check the output - should only include allowed connections
-            output = mock_stdout.getvalue().strip()
-            assert "allowed-snap:allowed-plug/slot-snap:slot-name" in output
-            assert "blacklisted-snap:blacklisted-plug/slot-snap:slot-name" not in output
-        finally:
-            temp_file_path.unlink()
-
+                - plug_snap: null
+                  plug_name: blocked-plug
+                  slot_snap: null
+                  slot_name: null
+            """),
+    )
     @patch("sys.stdin")
     @patch("sys.stdout", new_callable=StringIO)
-    def test_main_with_blacklist_wildcard_patterns(self, mock_stdout, mock_stdin):
+    def test_main_with_blacklist_wildcard_patterns(
+        self, mock_stdout, mock_stdin, mock_file
+    ):
         # Prepare mock input data
         mock_data = {
             "result": {
@@ -601,26 +609,10 @@ class TestMainFunction:
         }
         mock_stdin.read.return_value = json.dumps(mock_data)
 
-        # Create blacklist that blocks any connection with "blocked-plug" name
-        blacklist_content = dedent("""
-            items:
-              - match:
-                - plug_snap: null
-                  plug_name: blocked-plug
-                  slot_snap: null
-                  slot_name: null
-            """)
-        with NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as temp_file:
-            temp_file.write(blacklist_content)
-            temp_file_path = Path(temp_file.name)
+        test_args = ["test-snap", "--blacklist", "fake_blacklist.yaml"]
+        snap_connections.main(test_args)
 
-        try:
-            test_args = ["test-snap", "--blacklist", str(temp_file_path)]
-            snap_connections.main(test_args)
-
-            # Check the output - should exclude blocked-plug connections
-            output = mock_stdout.getvalue().strip()
-            assert "test-snap:allowed-plug/slot-snap:slot-name" in output
-            assert "blocked-plug" not in output
-        finally:
-            temp_file_path.unlink()
+        # Check the output - should exclude blocked-plug connections
+        output = mock_stdout.getvalue().strip()
+        assert "test-snap:allowed-plug/slot-snap:slot-name" in output
+        assert "blocked-plug" not in output
