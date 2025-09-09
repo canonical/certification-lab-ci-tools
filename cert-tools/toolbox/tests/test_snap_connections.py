@@ -1,6 +1,7 @@
 import json
 import pytest
 from io import StringIO
+from pathlib import Path
 from textwrap import dedent
 from unittest.mock import patch, mock_open
 
@@ -466,9 +467,13 @@ class TestMainFunction:
         with pytest.raises(SystemExit):
             snap_connections.main([])
 
+    @pytest.mark.parametrize("use_output_file", [False, True])
+    @patch("builtins.open", new_callable=mock_open)
     @patch("sys.stdin")
     @patch("sys.stdout", new_callable=StringIO)
-    def test_main_with_snaps_predicate(self, mock_stdout, mock_stdin):
+    def test_main_with_snaps_predicate(
+        self, mock_stdout, mock_stdin, mock_file, use_output_file
+    ):
         # Prepare mock input data
         mock_data = {
             "result": {
@@ -497,29 +502,56 @@ class TestMainFunction:
         mock_stdin.read.return_value = json.dumps(mock_data)
 
         test_args = ["allowed-plug-snap-1", "allowed-plug-snap-2"]
+        if use_output_file:
+            test_args.extend(["--output", "test_output.txt"])
+
         snap_connections.main(test_args)
 
+        if use_output_file:
+            # Check that file was written with correct content
+            mock_file.assert_called_with(Path("test_output.txt"), "w")
+            handle = mock_file()
+            output = handle.write.call_args[0][0]
+        else:
+            # Check stdout output
+            output = mock_stdout.getvalue()
+
         # Check the output - should only include connections from allowed-snap
-        output = mock_stdout.getvalue().strip()
         assert "allowed-plug-snap-1:plug-name/slot-snap:slot-name" in output
         assert "allowed-plug-snap-2:plug-name/slot-snap:slot-name" in output
         assert "filtered-out-plug-snap" not in output
 
+    @pytest.mark.parametrize("use_output_file", [False, True])
+    @patch("builtins.open", new_callable=mock_open)
     @patch("sys.stdin")
     @patch("sys.stdout", new_callable=StringIO)
-    def test_main_with_force_option(self, mock_stdout, mock_stdin):
+    def test_main_with_force_option(
+        self, mock_stdout, mock_stdin, mock_file, use_output_file
+    ):
         # Prepare mock input data with no possible connections
         mock_data = {"result": {"plugs": [], "slots": []}}
         mock_stdin.read.return_value = json.dumps(mock_data)
 
         # forced connection doesn't need to pertain to the specified snaps
         test_args = ["other-snap", "--force", "plug-snap:plug/slot-snap:slot"]
+        if use_output_file:
+            test_args.extend(["--output", "test_output.txt"])
+
         snap_connections.main(test_args)
 
+        if use_output_file:
+            # Check that file was written with correct content
+            mock_file.assert_called_with(Path("test_output.txt"), "w")
+            handle = mock_file()
+            output = handle.write.call_args[0][0].strip()
+        else:
+            # Check stdout output
+            output = mock_stdout.getvalue().strip()
+
         # Check the output - should include the forced connection
-        output = mock_stdout.getvalue().strip()
         assert output == "plug-snap:plug/slot-snap:slot"
 
+    @pytest.mark.parametrize("use_output_file", [False, True])
     @patch(
         "builtins.open",
         new_callable=mock_open,
@@ -534,7 +566,9 @@ class TestMainFunction:
     )
     @patch("sys.stdin")
     @patch("sys.stdout", new_callable=StringIO)
-    def test_main_with_blacklist_option(self, mock_stdout, mock_stdin, mock_file):
+    def test_main_with_blacklist_option(
+        self, mock_stdout, mock_stdin, mock_file, use_output_file
+    ):
         # Prepare mock input data
         mock_data = {
             "result": {
@@ -563,13 +597,29 @@ class TestMainFunction:
             "--blacklist",
             "fake_blacklist.yaml",
         ]
+        if use_output_file:
+            test_args.extend(["--output", "test_output.txt"])
+
         snap_connections.main(test_args)
 
+        if use_output_file:
+            # Find the output file write call among all the write calls
+            output = None
+            for call in mock_file().write.call_args_list:
+                call_content = call[0][0]
+                if "allowed-snap:allowed-plug" in call_content:
+                    output = call_content
+                    break
+            assert output is not None
+        else:
+            # Check stdout output
+            output = mock_stdout.getvalue()
+
         # Check the output - should only include allowed connections
-        output = mock_stdout.getvalue().strip()
         assert "allowed-snap:allowed-plug/slot-snap:slot-name" in output
         assert "blacklisted-snap:blacklisted-plug/slot-snap:slot-name" not in output
 
+    @pytest.mark.parametrize("use_output_file", [False, True])
     @patch(
         "builtins.open",
         new_callable=mock_open,
@@ -585,7 +635,7 @@ class TestMainFunction:
     @patch("sys.stdin")
     @patch("sys.stdout", new_callable=StringIO)
     def test_main_with_blacklist_wildcard_patterns(
-        self, mock_stdout, mock_stdin, mock_file
+        self, mock_stdout, mock_stdin, mock_file, use_output_file
     ):
         # Prepare mock input data
         mock_data = {
@@ -610,9 +660,24 @@ class TestMainFunction:
         mock_stdin.read.return_value = json.dumps(mock_data)
 
         test_args = ["test-snap", "--blacklist", "fake_blacklist.yaml"]
+        if use_output_file:
+            test_args.extend(["--output", "test_output.txt"])
+
         snap_connections.main(test_args)
 
+        if use_output_file:
+            # Find the output file write call among all the write calls
+            output = None
+            for call in mock_file().write.call_args_list:
+                call_content = call[0][0]
+                if "test-snap:allowed-plug" in call_content:
+                    output = call_content
+                    break
+            assert output is not None
+        else:
+            # Check stdout output
+            output = mock_stdout.getvalue()
+
         # Check the output - should exclude blocked-plug connections
-        output = mock_stdout.getvalue().strip()
         assert "test-snap:allowed-plug/slot-snap:slot-name" in output
         assert "blocked-plug" not in output
