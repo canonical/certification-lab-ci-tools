@@ -285,6 +285,9 @@ def main(args: Optional[List[str]] = None):
         help="Force additional connections",
     )
     parser.add_argument("--blacklist", type=Path, help="Path to the connections blacklist")
+    parser.add_argument(
+        "--output", type=Path, help="Output file path (default: stdout)"
+    )
     args = parser.parse_args(args)
 
     # parse standard input as JSON
@@ -296,10 +299,17 @@ def main(args: Optional[List[str]] = None):
         predicates.append(Blacklist.from_file(args.blacklist))
 
     connector = Connector(predicates)
-
     snap_connections = connector.process(snap_connection_data)
-    for connection in sorted(snap_connections) + (args.force or []):
-        print(connection)
+    output = (
+        str(connection) for connection in sorted(snap_connections) + (args.force or [])
+    )
+
+    if args.output:
+        with open(args.output, "w") as f:
+            f.write("\n".join(output) + "\n")
+    else:
+        for line in output:
+            print(line)
 
 
 if __name__ == "__main__":
