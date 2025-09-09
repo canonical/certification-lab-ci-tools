@@ -229,7 +229,7 @@ def main(args: Optional[List[str]] = None):
         type=Connection.from_string,
         help="Force additional connections",
     )
-    parser.add_argument("--blacklist", type=Path, help="Blacklist connections")
+    parser.add_argument("--blacklist", type=Path, help="Path to the connections blacklist")
     args = parser.parse_args(args)
 
     # parse standard input as JSON
