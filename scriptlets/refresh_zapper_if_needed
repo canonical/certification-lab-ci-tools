@@ -39,6 +39,11 @@ if echo "$message" | grep -q 'no updates available'; then
     _run sudo snap restart zapper
 fi
 
+set -e
+echo "Wait until the Zapper service is ready..."
+_run_retry zapper --help 2> /dev/null
+set +e
+
 # Update only the mainboard firmware. The add-on firmware is rarely updated,  
 # and it's safer to do it manually for the time being.
-_run_retry zapper firmware update -y --allow-older --component-type MAINBOARD
+_run zapper firmware update -y --allow-older --component-type MAINBOARD
