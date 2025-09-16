@@ -41,7 +41,7 @@ fi
 
 set -e
 echo "Wait until the Zapper service is ready..."
-_run_retry zapper --help 2> /dev/null
+_run_retry zapper addon list 2> /dev/null
 set +e
 
 # Update only the mainboard firmware. The add-on firmware is rarely updated,  
