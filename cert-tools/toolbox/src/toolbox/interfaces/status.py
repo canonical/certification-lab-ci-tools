@@ -1,10 +1,9 @@
-from invoke import Result
 import logging
+from functools import partial
 from typing import Iterable, NamedTuple
 
 from toolbox.interfaces import DeviceInterface
-from toolbox.devices import Device, ExecutionError
-# from toolbox.result import ExecutionResult
+from toolbox.devices import ExecutionError
 from toolbox.retries import retry, RetryPolicy
 
 
@@ -23,12 +22,7 @@ class SystemStatus(NamedTuple):
 
 
 class SystemStatusInterface(DeviceInterface):
-    def __init__(self, device: Device, allowed: Iterable[str] | None = None):
-        self.device = device
-        self.allowed = {"running"}.union(allowed or set())
-        self.allowed_message = ", ".join(self.allowed)
-
-    def get_status(self) -> SystemStatus:
+    def get_status(self, allowed: Iterable[str] | None = None) -> SystemStatus:
         try:
             result = self.device.run(
                 command=["systemctl", "is-system-running"], hide=True
@@ -37,13 +31,21 @@ class SystemStatusInterface(DeviceInterface):
             logger.error(error)
             return SystemStatus(exited=255)
         status = result.stdout.strip()
+        allowed = {"running"}.union(allowed or set())
+        allowed_message = ", ".join(allowed)
         logger.info(
             "Checking status of '%s': %s (allowed: %s)",
             self.device.host,
             status,
-            self.allowed_message,
+            allowed_message,
         )
-        return SystemStatus(exited=0 if status in self.allowed else result.exited, status=status)
+        return SystemStatus(
+            exited=0 if status in allowed else result.exited, status=status
+        )
 
-    def wait_for_status(self, policy: RetryPolicy | None = None) -> SystemStatus:
-        return retry(self.get_status, policy=policy)
+    def wait_for_status(
+        self, allowed: Iterable[str] | None = None, policy: RetryPolicy | None = None
+    ) -> SystemStatus:
+        get_status_with_allowed = partial(self.get_status, allowed=allowed)
+        get_status_with_allowed.__name__ = self.get_status.__name__
+        return retry(get_status_with_allowed, policy=policy)

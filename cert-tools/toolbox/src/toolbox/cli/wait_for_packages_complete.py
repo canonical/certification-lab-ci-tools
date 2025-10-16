@@ -16,8 +16,8 @@ def main():
     parser.add_argument("--delay", type=int, default=10, help="Delay between retries")
     args = parser.parse_args()
 
-    deb_interface = DebInterface(device=LabDevice())
-    result = deb_interface.wait_for_complete(
+    device = LabDevice(interfaces=[DebInterface()])
+    result = device.interfaces[DebInterface].wait_for_complete(
         policy=Linear(times=args.times - 1, delay=args.delay)
     )
     sys.exit(1 - int(result))

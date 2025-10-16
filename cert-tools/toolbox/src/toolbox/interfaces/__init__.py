@@ -1,6 +1,29 @@
-from toolbox.devices import Device
+from abc import ABC
+from typing import Iterable, Type
 
 
-class DeviceInterface:
-    def __init__(self, device: Device):
-        self.device = device
+class DeviceInterfaceError(AttributeError):
+    pass
+
+
+class DeviceInterface(ABC):
+    requires: Iterable[Type["DeviceInterface"]]
+
+    def __init_subclass__(
+        cls, *, requires: Iterable[Type["DeviceInterface"]] | None = None
+    ):
+        cls.requires = tuple(requires or ())
+
+    def __init__(self):
+        self._device = None
+
+    @property
+    def device(self) -> "Device":
+        if self._device is None:
+            raise DeviceInterfaceError(
+                f"'{type(self).__name__}' is not attached to a device"
+            )
+        return self._device
+
+    def attach_to(self, device: "Device"):
+        self._device = device

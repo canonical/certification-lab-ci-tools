@@ -33,9 +33,9 @@ def main():
     if args.allow_starting:
         allowed.add("starting")
 
-    status_interface = SystemStatusInterface(device=LabDevice(), allowed=allowed)
-    result = status_interface.wait_for_status(
-        policy=Linear(times=args.times - 1, delay=args.delay)
+    device = LabDevice(interfaces=[SystemStatusInterface()])
+    result = device.interfaces[SystemStatusInterface].wait_for_status(
+        allowed=allowed, policy=Linear(times=args.times - 1, delay=args.delay)
     )
     sys.exit(result.exited)
 

@@ -1,6 +1,17 @@
-from toolbox.interfaces.snapd import SnapdAPIClient
+from functools import partial
+import logging
 
-'''
+from toolbox.interfaces import DeviceInterface
+from toolbox.interfaces.reboot import RebootInterface
+from toolbox.interfaces.snapd import SnapdAPIClient
+from toolbox.interfaces.status import SystemStatusInterface
+from toolbox.retries import retry, RetryPolicy
+
+
+logger = logging.getLogger(__name__)
+
+
+"""
 class SnapChannel(NamedTuple):
     track: str | None = None
     risk: str | None = None
@@ -22,38 +33,41 @@ class SnapChannel(NamedTuple):
 
     def stabilize(self):
         return self._replace(risk="stable")
-'''
+"""
 
 
 class SnapInstallError(RuntimeError):
     pass
 
 
-class SnapInterface:
-
-    def __init__(self, client: SnapdAPIClient):
-        self.client = client
-        self.device = self.client.device
-
+class SnapInterface(
+    DeviceInterface,
+    requires=(RebootInterface, SnapdAPIClient, SystemStatusInterface),
+):
     def get_active(self, snap: str | None = None):
         params = {"snaps": [snap]} if snap else None
-        response = self.client.get(endpoint="snaps", params=params)
+        response = self.device.interfaces[SnapdAPIClient].get(
+            endpoint="snaps", params=params
+        )
         return response["result"]
 
     def get_changes(self):
-        response = self.client.get(endpoint="changes", params={"select": "all"})
+        response = self.device.interfaces[SnapdAPIClient].get(
+            endpoint="changes", params={"select": "all"}
+        )
         return response["result"]
 
     def get_change(self, id: str):
-        response = self.client.get(endpoint=f"changes/{id}")
+        response = self.device.interfaces[SnapdAPIClient].get(endpoint=f"changes/{id}")
         return response["result"]
 
-    '''
     def check_snap_changes_complete(self) -> bool:
         changes = self.get_changes()
         complete = all(change["ready"] for change in changes)
         if complete:
+            logger.info("No snap operations are ongoing")
             return True
+        logger.info("Snap operations are ongoing")
         for change in changes:
             if not change["ready"]:
                 print(
@@ -61,21 +75,36 @@ class SnapInterface:
                 )
         return False
 
-    def check_snap_complete_and_reboot(self) -> bool:
-        complete = self.check_snap_complete()
-        if not complete and check_reboot(self.device):
+    def check_snap_changes_complete_and_reboot(
+        self, status_policy: RetryPolicy | None = None
+    ) -> bool:
+        complete = self.check_snap_changes_complete()
+        if (
+            not complete
+            and self.device.interfaces[RebootInterface].is_reboot_required()
+        ):
             logger.info("Manually rebooting to complete waiting snap changes...")
-            reboot(self.device)
-            wait_for_running(self.device, allowed={"degraded"}, policy=Linear(delay=10))
-            complete = self.check_snap_complete()
+            self.device.interfaces[RebootInterface].reboot()
+            self.device.interfaces[SystemStatusInterface].wait_for_running(
+                allowed={"degraded"}, policy=status_policy
+            )
+            complete = self.check_snap_changes_complete()
         return complete
 
-    def wait_for_snap_changes(self, policy: RetryPolicy | None = None):
-        policy = policy or Linear()
-        return retry(self.check_snap_complete_and_reboot, policy=policy)
-    '''
+    def wait_for_snap_changes(
+        self,
+        policy: RetryPolicy | None = None,
+        status_policy: RetryPolicy | None = None,
+    ):
+        check_snap_changes = partial(
+            self.check_snap_changes_complete_and_reboot, status_policy=status_policy
+        )
+        check_snap_changes.__name__ = (
+            self.check_snap_changes_complete_and_reboot.__name__
+        )
+        return retry(check_snap_changes, policy=policy)
 
-    '''
+    """
     def install(
         self,
         snap: str,
@@ -105,9 +134,9 @@ class SnapInterface:
             raise SnapInstallError(
                 f"Snap change {snap_change_id} incomplete: {snap_change['status']}"
             )
-    '''
+    """
 
-    '''
+    """
     def execute_plan(self, packages):
         for package in packages:
             if package["type"] == "snap":
@@ -117,7 +146,7 @@ class SnapInterface:
                     options=package.get("options"),
                     refresh_ok=True,
                 )
-    '''
+    """
 
 
 """

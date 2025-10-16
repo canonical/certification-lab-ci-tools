@@ -9,6 +9,10 @@ from invoke.exceptions import Failure, ThreadException
 from paramiko.config import SSHConfig
 
 
+from toolbox.interfaces import DeviceInterface
+from toolbox.devices.registry import DeviceInterfaceRegistry
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -21,8 +25,11 @@ class ExecutionError(RuntimeError):
 
 
 class Device(ABC):
-    def __init__(self, host: str):
+    def __init__(self, host: str, interfaces: Iterable[DeviceInterface] | None = None):
         self.host = host
+        self.interfaces = DeviceInterfaceRegistry(interfaces)
+        for interface in self.interfaces:
+            interface.attach_to(self)
 
     def __str__(self):
         return f"{type(self).__name__}('{self.host}')"
@@ -40,8 +47,8 @@ class Device(ABC):
 
 
 class LocalHost(Device):
-    def __init__(self):
-        super().__init__(host="localhost")
+    def __init__(self, interfaces: Iterable[DeviceInterface] | None = None):
+        super().__init__(host="localhost", interfaces=interfaces)
 
     def run(self, command: CommandType, **kwargs) -> Result:
         command = self._process(command)
@@ -53,9 +60,13 @@ class LocalHost(Device):
 
 class RemoteHost(Device):
     def __init__(
-        self, host: str, user: str | None = None, config: SSHConfig | None = None
+        self,
+        host: str,
+        user: str | None = None,
+        config: SSHConfig | None = None,
+        interfaces: Iterable[DeviceInterface] | None = None,
     ):
-        super().__init__(host)
+        super().__init__(host=host, interfaces=interfaces)
         self.user = user
         self.config = config
 

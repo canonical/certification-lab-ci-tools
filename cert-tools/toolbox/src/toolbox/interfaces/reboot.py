@@ -2,7 +2,7 @@ from toolbox.interfaces import DeviceInterface
 
 
 class RebootInterface(DeviceInterface):
-    def reboot_required(self) -> bool:
+    def is_reboot_required(self) -> bool:
         result = self.device.run(["test", "-f", "/run/reboot-required"])
         return result.exited == 0
 

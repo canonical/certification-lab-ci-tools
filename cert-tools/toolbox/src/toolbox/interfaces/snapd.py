@@ -3,13 +3,10 @@ import json
 import re
 from urllib.parse import urlencode
 
-from toolbox.devices import Device
+from toolbox.interfaces import DeviceInterface
 
 
-class SnapdAPIClient:
-    def __init__(self, device: Device):
-        self.device = device
-
+class SnapdAPIClient(DeviceInterface):
     def create_get_request(self, endpoint: str, params: dict = None) -> str:
         query = "?" + urlencode(params, doseq=True) if params else ""
         return (
