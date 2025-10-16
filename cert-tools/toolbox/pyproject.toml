@@ -7,7 +7,7 @@ package-dir = {"" = "src"}
 
 [project]
 name = "toolbox"
-version = "1.0.0"
+version = "2.0.0"
 description = "Python scriptlets"
 authors = [
     {name = "George Boukeas", email = "george.boukeas@canonical.com"},
@@ -18,13 +18,16 @@ dependencies = [
     "snapstore @ ../snapstore"
 ]
 [project.scripts]
-snap_connections = "toolbox.snap_connections:main"
-snap_state = "toolbox.snap_state:main"
-_run = "toolbox.cli:run"
-wait-for-ssh = "toolbox.cli:wait_for_ssh_entry_point"
-wait_for_ssh = "toolbox.cli:wait_for_ssh_entry_point"
-wait-for-snap-changes = "toolbox.cli:wait_for_snap_changes_entry_point"
-wait_for_snap_changes = "toolbox.cli:wait_for_snap_changes_entry_point"
+# snap_connections = "toolbox.snap_connections:main"
+# snap_state = "toolbox.snap_state:main"
+_run = "toolbox.cli.run:main"
+run = "toolbox.cli.run:main"
+wait-for-ssh = "toolbox.cli.wait_for_ssh:main"
+wait_for_ssh = "toolbox.cli.wait_for_ssh:main"
+wait-for-packages-complete = "toolbox.cli.wait_for_packages_complete:main"
+wait_for_packages_complete = "toolbox.cli.wait_for_packages_complete:main"
+# wait-for-snap-changes = "toolbox.cli:wait_for_snap_changes_entry_point"
+# wait_for_snap_changes = "toolbox.cli:wait_for_snap_changes_entry_point"
 
 [project.optional-dependencies]
 dev = ["pytest"]

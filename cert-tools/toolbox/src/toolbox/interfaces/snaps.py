@@ -1,65 +1,18 @@
-from functools import partial
-from io import StringIO
-import logging
-import json
-import re
-from typing import List, NamedTuple, Optional
-from urllib.parse import urlencode
+from toolbox.interfaces.snapd import SnapdAPIClient
 
-from toolbox.scripts.devices import Device
-from toolbox.scripts.direct import check_reboot, reboot, wait_for_running
-from toolbox.scripts.retries import retry, RetryPolicy, Linear
-
-
-logger = logging.getLogger(__name__)
-
-
-class SnapdAPIClient:
-
-    def __init__(self, device: Device):
-        self.device = device
-
-    def create_get_request(self, endpoint: str, params: dict = None) -> str:
-        query = "?" + urlencode(params, doseq=True) if params else ""
-        return (
-            f"GET /v2/{endpoint}{query} "
-            "HTTP/1.1\n"
-            "Host: placeholder\n"
-            "Connection: close\n\n"
-        )
-
-    def get(self, endpoint: str, params: dict = None) -> dict:
-        request = self.create_get_request(endpoint, params)
-        raw_response = self.device.run(
-            ["nc", "-U", "/run/snapd.socket"],
-            in_stream=StringIO(request),
-            echo_stdin=False,
-            hide=True
-        ).stdout
-        match = re.search(r'{.*}', raw_response, re.DOTALL)
-        try:
-            response_data = match.group(0)
-        except AttributeError as error:
-            raise RuntimeError(
-                f"Unexpected response {raw_response}"
-            ) from error
-        return json.loads(response_data)
-
-
+'''
 class SnapChannel(NamedTuple):
-    track: Optional[str] = None
-    risk: Optional[str] = None
-    branch: Optional[str] = None
+    track: str | None = None
+    risk: str | None = None
+    branch: str | None = None
 
     @classmethod
     def from_string(cls, string):
-        channel_template = r'^(?:([\w-]+)(?:/([\w-]+)(?:/([\w-]+))?)?)?$'
+        channel_template = r"^(?:([\w-]+)(?:/([\w-]+)(?:/([\w-]+))?)?)?$"
         match = re.match(channel_template, string)
         if not match:
             raise ValueError(f"Cannot parse '{string}' as a snap channel")
-        components = tuple(
-            component for component in match.groups() if component
-        )
+        components = tuple(component for component in match.groups() if component)
         if components and components[0] in {"stable", "candidate", "beta", "edge"}:
             components = (None, *components)
         return cls(*components)
@@ -69,76 +22,68 @@ class SnapChannel(NamedTuple):
 
     def stabilize(self):
         return self._replace(risk="stable")
+'''
 
 
 class SnapInstallError(RuntimeError):
     pass
 
 
-class SnapManager:
-
-    # incomplete = {"Doing", "Undoing", "Wait", "Do", "Undo"}
+class SnapInterface:
 
     def __init__(self, client: SnapdAPIClient):
         self.client = client
         self.device = self.client.device
 
-    def get_active(self, snap: Optional[str] = None):
+    def get_active(self, snap: str | None = None):
         params = {"snaps": [snap]} if snap else None
         response = self.client.get(endpoint="snaps", params=params)
         return response["result"]
 
     def get_changes(self):
-        response = self.client.get(
-            endpoint="changes", params={"select": "all"}
-        )
+        response = self.client.get(endpoint="changes", params={"select": "all"})
         return response["result"]
 
     def get_change(self, id: str):
         response = self.client.get(endpoint=f"changes/{id}")
         return response["result"]
 
-    def check_snap_complete(self) -> bool:
+    '''
+    def check_snap_changes_complete(self) -> bool:
         changes = self.get_changes()
-        # complete = not statuses.intersection(self.incomplete)
         complete = all(change["ready"] for change in changes)
         if complete:
             return True
         for change in changes:
-            # if change["status"] in statuses.intersection(self.incomplete):
             if not change["ready"]:
-                print(f"{change['id']} {change['ready']} {change['status']}: {change['summary']}")
+                print(
+                    f"{change['id']} {change['ready']} {change['status']}: {change['summary']}"
+                )
         return False
 
     def check_snap_complete_and_reboot(self) -> bool:
         complete = self.check_snap_complete()
         if not complete and check_reboot(self.device):
-            logger.info(
-                "Manually rebooting to complete waiting snap changes..."
-            )
+            logger.info("Manually rebooting to complete waiting snap changes...")
             reboot(self.device)
-            wait_for_running(
-                self.device, allowed={"degraded"},
-                policy=Linear(delay=10)
-            )
+            wait_for_running(self.device, allowed={"degraded"}, policy=Linear(delay=10))
             complete = self.check_snap_complete()
         return complete
 
-    def wait_for_snap_changes(self, policy: Optional[RetryPolicy] = None):
+    def wait_for_snap_changes(self, policy: RetryPolicy | None = None):
         policy = policy or Linear()
         return retry(self.check_snap_complete_and_reboot, policy=policy)
+    '''
 
+    '''
     def install(
         self,
         snap: str,
-        channel: Optional[str] = None,
-        options: List[str] = None,
+        channel: str | None = None,
+        options: List[str] | None = None,
         refresh_ok: bool = False,
     ) -> bool:
-        action = (
-            "refresh" if self.get_active(snap) and refresh_ok
-            else "install"
-        )
+        action = "refresh" if self.get_active(snap) and refresh_ok else "install"
         command = ["sudo", "snap", action, "--no-wait", snap]
         if channel:
             command.append(f"--channel={channel}")
@@ -154,15 +99,15 @@ class SnapManager:
         snap_change = self.get_change(snap_change_id)
         if not wait_result:
             raise SnapInstallError(
-                f"Snap change {snap_change_id} timed-out: "
-                f"{snap_change['summary']}"
+                f"Snap change {snap_change_id} timed-out: {snap_change['summary']}"
             )
         if not snap_change["status"] == "Done":
             raise SnapInstallError(
-                f"Snap change {snap_change_id} incomplete: "
-                f"{snap_change['status']}"
+                f"Snap change {snap_change_id} incomplete: {snap_change['status']}"
             )
+    '''
 
+    '''
     def execute_plan(self, packages):
         for package in packages:
             if package["type"] == "snap":
@@ -170,16 +115,16 @@ class SnapManager:
                     snap=package["name"],
                     channel=package.get("channel"),
                     options=package.get("options"),
-                    refresh_ok=True
+                    refresh_ok=True,
                 )
-
+    '''
 
 
 """
 class SnapAction(NamedTuple):
     action: str
     snap: str
-    channel: Optional[SnapChannel] = None
+    channel: SnapChannel | None = None
 
     def __str__(self):
         return " ".join(str(component) for component in self if component)
@@ -207,7 +152,7 @@ class SnapInstaller:
         }
 
     @staticmethod
-    def action(snap: str, target_channel: SnapChannel, active_channel: Optional[SnapChannel] = None):
+    def action(snap: str, target_channel: SnapChannel, active_channel: SnapChannel | None = None):
         if not active_channel:
             return SnapAction("install", snap=snap, channel=target_channel)
         if target_channel != active_channel:
