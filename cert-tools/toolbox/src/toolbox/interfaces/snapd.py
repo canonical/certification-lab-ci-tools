@@ -27,6 +27,8 @@ class SnapdAPIClient(DeviceInterface):
             response,
             re.MULTILINE,
         )
+        if not status_match:
+            raise SnapdAPIError(f"Unable to retrieve status from response {response}")
         return status_match.groupdict()
 
     @staticmethod
