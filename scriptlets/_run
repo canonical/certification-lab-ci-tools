@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+
+# Run a command on a remote device via SSH.
+#
+# Description:
+#
+# The IP of the device is provided by the environment variable DEVICE_IP,
+# which must be set. The user name on the remote device is `ubuntu`
+# by default, unless provided by the environment variable DEVICE_USER.
+#
+# If provided, DEVICE_PWD can be used for password-based authentication,
+# otherwise it is expected to have set up authorization keys first.
+#
+# This script sources `defs/set_ssh_options` to set SSH_OPTS.
+# This script soures `defs/check_for_device_ip` to check that DEVICE_IP is set.
+#
+# Return value:
+#
+# The value returned by the command on the remote device, or 255 in case
+# of an ssh error
+
+usage() {
+    echo "Usage: $(basename ${BASH_SOURCE[0]}) <command>"
+}
+
+
+if [ $# -lt 1 ]; then
+    usage
+    echo "Error: <command> not specified"
+    exit 1
+fi
+
+check_for_device_ip || exit 1
+source "$(dirname ${BASH_SOURCE[0]})/defs/ssh_options"
+USER=${DEVICE_USER:-ubuntu}
+
+SSHPASS=${DEVICE_PWD:+"sshpass -p $DEVICE_PWD"}
+$SSHPASS ssh $SSH_OPTS $USER@$DEVICE_IP "export PATH=\"\$PATH:/home/$USER/$TOOLS_PATH_DEVICE\"; $@"
