@@ -18,12 +18,12 @@ class DeviceInterface(ABC):
         self._device = None
 
     @property
-    def device(self) -> "Device":
+    def device(self) -> "Device":  # noqa: F821
         if self._device is None:
             raise DeviceInterfaceError(
                 f"'{type(self).__name__}' is not attached to a device"
             )
         return self._device
 
-    def attach_to(self, device: "Device"):
+    def attach_to(self, device: "Device"):  # noqa: F821
         self._device = device

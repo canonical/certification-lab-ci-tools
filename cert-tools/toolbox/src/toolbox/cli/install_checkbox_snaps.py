@@ -1,0 +1,48 @@
+from argparse import ArgumentParser, REMAINDER
+
+from snapstore.client import SnapstoreClient
+from toolbox.checkbox.snaps import CheckboxSnapsInstaller
+from toolbox.devices import LocalHost
+from toolbox.devices.lab import LabDevice
+from toolbox.entities.snaps import SnapSpecifier
+from toolbox.interfaces.reboot import RebootInterface
+from toolbox.interfaces.snaps import SnapInterface
+from toolbox.interfaces.snapd import SnapdAPIClient
+from toolbox.interfaces.status import SystemStatusInterface
+
+
+def main():
+    parser = ArgumentParser(
+        description="Install Checkbox on device (from snaps) and agent (from source)"
+    )
+    parser.add_argument("frontend", help="Checkbox frontend snap")
+    parser.add_argument(
+        "--additional",
+        dest="frontends",
+        nargs=REMAINDER,
+        help="Specify additional frontend snap specs",
+    )
+    args = parser.parse_args()
+
+    frontends = [SnapSpecifier.from_string(args.frontend)] + [
+        SnapSpecifier.from_string(frontend) for frontend in args.frontends or ()
+    ]
+    device = LabDevice(
+        interfaces=[
+            SystemStatusInterface(),
+            RebootInterface(),
+            SnapdAPIClient(),
+            SnapInterface(),
+        ]
+    )
+    installer = CheckboxSnapsInstaller(
+        device=device,
+        agent=LocalHost(),
+        frontends=frontends,
+        snapstore=SnapstoreClient(),
+    )
+    installer.install()
+
+
+if __name__ == "__main__":
+    main()

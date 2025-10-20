@@ -27,7 +27,7 @@ class ExecutionError(RuntimeError):
 class Device(ABC):
     def __init__(self, host: str, interfaces: Iterable[DeviceInterface] | None = None):
         self.host = host
-        self.interfaces = DeviceInterfaceRegistry(interfaces)
+        self.interfaces = DeviceInterfaceRegistry(interfaces or ())
         for interface in self.interfaces:
             interface.attach_to(self)
 

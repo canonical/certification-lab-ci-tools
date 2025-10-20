@@ -6,27 +6,65 @@ from urllib.parse import urlencode
 from toolbox.interfaces import DeviceInterface
 
 
+class SnapdAPIError(Exception):
+    pass
+
+
 class SnapdAPIClient(DeviceInterface):
-    def create_get_request(self, endpoint: str, params: dict = None) -> str:
+    @staticmethod
+    def create_get_request_url(endpoint: str, params: dict = None) -> str:
         query = "?" + urlencode(params, doseq=True) if params else ""
-        return (
-            f"GET /v2/{endpoint}{query} "
-            "HTTP/1.1\n"
-            "Host: placeholder\n"
-            "Connection: close\n\n"
+        return f"GET /v2/{endpoint}{query}"
+
+    @staticmethod
+    def create_get_request(url: str) -> str:
+        return f"{url} HTTP/1.1\nHost: placeholder\nConnection: close\n\n"
+
+    @staticmethod
+    def parse_status(response: str) -> dict[str, str]:
+        status_match = re.search(
+            r"^HTTP/\d+\.\d+\s+(?P<status_code>\d{3})(?:\s+(?P<reason>.*?))?\s*$",
+            response,
+            re.MULTILINE,
         )
+        return status_match.groupdict()
+
+    @staticmethod
+    def parse_content_type(response: str) -> dict[str, str]:
+        content_match = re.search(
+            r"^Content-Type: (?P<content_type>.*?)\s*$", response, re.MULTILINE
+        )
+        return content_match.group("content_type")
+
+    @staticmethod
+    def parse_json_content(response: str) -> dict[str, str]:
+        json_match = re.search(r"{.*}", response, re.DOTALL)
+        if json_match is None:
+            raise SnapdAPIError("Unable to retrieve application/json content")
+        json_contents_str = json_match.group(0)
+        try:
+            json_contents = json.loads(json_contents_str)
+        except json.decoder.JSONDecodeError as error:
+            raise SnapdAPIError(
+                f"Unable to parse application/json content: {json_contents_str}"
+            ) from error
+        return json_contents
 
     def get(self, endpoint: str, params: dict = None) -> dict:
-        request = self.create_get_request(endpoint, params)
-        raw_response = self.device.run(
+        url = self.create_get_request_url(endpoint, params)
+        request = self.create_get_request(url)
+        response = self.device.run(
             ["nc", "-U", "/run/snapd.socket"],
             in_stream=StringIO(request),
             echo_stdin=False,
             hide=True,
         ).stdout
-        match = re.search(r"{.*}", raw_response, re.DOTALL)
-        try:
-            response_data = match.group(0)
-        except AttributeError as error:
-            raise RuntimeError(f"Unexpected response {raw_response}") from error
-        return json.loads(response_data)
+        status = self.parse_status(response)
+        if status["status_code"] != "200":
+            raise SnapdAPIError(
+                f"Response {status['status_code']} ({status.get('reason', '')}) to request {url}"
+            )
+        content_type = self.parse_content_type(response)
+        if content_type == "application/json":
+            return self.parse_json_content(response)["result"]
+        raise SnapdAPIError(f"Unable to parse content type: {content_type}")

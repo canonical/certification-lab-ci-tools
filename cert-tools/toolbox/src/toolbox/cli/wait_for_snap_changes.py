@@ -1,5 +1,4 @@
 from argparse import ArgumentParser
-import logging
 import sys
 
 from toolbox.devices.lab import LabDevice
@@ -8,9 +7,6 @@ from toolbox.interfaces.snaps import SnapInterface
 from toolbox.interfaces.snapd import SnapdAPIClient
 from toolbox.interfaces.status import SystemStatusInterface
 from toolbox.retries import Linear
-
-
-logger = logging.Logger(__name__)
 
 
 def main():

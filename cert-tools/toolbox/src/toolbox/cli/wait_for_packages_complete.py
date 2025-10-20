@@ -1,13 +1,9 @@
 from argparse import ArgumentParser
-import logging
 import sys
 
 from toolbox.devices.lab import LabDevice
 from toolbox.retries import Linear
 from toolbox.interfaces.debs import DebInterface
-
-
-logger = logging.Logger(__name__)
 
 
 def main():

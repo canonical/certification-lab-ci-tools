@@ -20,7 +20,10 @@ class Linear(RetryPolicy):
         self.delay = delay
 
     def waits(self):
-        yield from repeat(self.delay, self.times)
+        if self.times is None:
+            yield from repeat(self.delay)
+        else:
+            yield from repeat(self.delay, times=self.times)
 
 
 def retry(script: Callable, policy: RetryPolicy | None = None) -> Any:

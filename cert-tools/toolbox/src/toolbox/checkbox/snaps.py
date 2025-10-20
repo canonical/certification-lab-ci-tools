@@ -1,0 +1,139 @@
+"""
+# get the store token from the device, if available
+export STORE=$(_run "snap model --assertion" | sed -n 's/^store:\s\(.*\)$/\1/p')
+
+# use the frontend to derive the Checkbox runtime to be installed
+export RUNTIME_NAME=$(get_runtime $FRONTEND_NAME $FRONTEND_TRACK $RISK)
+[ "$?" -ne 0 ] && exit 1
+RUNTIME_CHANNEL="latest/$RISK"
+"""
+
+import logging
+from typing import Iterable
+
+from snapstore.client import SnapstoreClient
+from toolbox.checkbox.installer import CheckboxInstaller
+from toolbox.checkbox.helpers.runtime import CheckboxRuntimeHelper
+from toolbox.entities.connections import Connection, Connector, Predicate, SelectSnaps
+from toolbox.entities.snaps import SnapSpecifier
+from toolbox.devices import Device
+from toolbox.interfaces.snapd import SnapdAPIClient
+from toolbox.interfaces.snaps import SnapInterface, SnapInstallError
+from toolbox.retries import Linear
+
+
+logger = logging.getLogger(__name__)
+
+
+class CheckboxSnapsInstaller(CheckboxInstaller):
+    def __init__(
+        self,
+        device: Device,
+        agent: Device,
+        frontends: list[SnapSpecifier],
+        snapstore: SnapstoreClient,
+    ):
+        self.device = device
+        self.agent = agent
+        self.frontends = frontends
+        self.runtime = CheckboxRuntimeHelper(
+            self.device, snapstore
+        ).determine_checkbox_runtime(snap=frontends[0])
+
+    @property
+    def checkbox_cli(self):
+        return f"{self.frontends[0].name}.checkbox-cli"
+
+    def install_frontend_snap(self, snap: SnapSpecifier):
+        self.device.run(
+            [
+                "snap",
+                "download",
+                snap.name,
+                f"--channel={snap.channel}",
+                f"--basename={snap.name}",
+            ]
+        )
+        self.device.run(["sudo", "snap", "ack", f"{snap.name}.assert"])
+        try:
+            logger.info(
+                "Installing frontend snap '%s' from %s "
+                "(as a strict snap, using --devmode)",
+                snap.name,
+                snap.channel,
+            )
+            self.device.interfaces[SnapInterface].install(
+                f"{snap.name}.snap",
+                snap.channel,
+                options=["--devmode"],
+                policy=Linear(times=30, delay=10),
+            )
+            strict = True
+        except SnapInstallError:
+            logger.info(
+                "Failed to install '%s' as a strict snap, trying again "
+                "(as a classic snap, using --classic)",
+                snap.name,
+            )
+            self.device.interfaces[SnapInterface].install(
+                f"{snap.name}.snap",
+                snap.channel,
+                options=["--classic"],
+                policy=Linear(times=30, delay=10),
+            )
+            strict = False
+        return strict
+
+    def install_runtime(self):
+        logger.info(
+            "Installing Checkbox runtime snap: %s from %s",
+            self.runtime.name,
+            self.runtime.channel,
+        )
+        self.device.interfaces[SnapInterface].install(
+            self.runtime.name, self.runtime.channel, policy=Linear(times=30, delay=10)
+        )
+
+    def install_frontends(self):
+        # install secondary frontends
+        for frontend in self.frontends[1:]:
+            self.install_frontend_snap(frontend)
+            self.device.run(["sudo", "snap", "stop", "--disable", frontend.name])
+        # install primary frontend
+        frontend = self.frontends[0]
+        self.install_frontend_snap(frontend)
+        self.device.run(["sudo", "snap", "set", frontend.name, "agent=enabled"])
+        self.device.run(["sudo", "snap", "set", frontend.name, "slave=enabled"])
+
+    def restart_frontends(self):
+        frontend = self.frontends[0]
+        logger.info("Restarting primary frontend snap: %s", frontend.name)
+        self.device.run(["sudo", "snap", "restart", frontend.name])
+
+    def determine_connections(self, predicates: Iterable[Predicate]) -> set[Connection]:
+        connector = Connector(predicates)
+        snap_connection_data = self.device.interfaces[SnapdAPIClient].get("connections")
+        return connector.process(snap_connection_data)
+
+    def perform_connections(self):
+        # perform possible connections with frontend snap plugs
+        # [TODO] Add blacklist
+        predicates = [SelectSnaps(frontend.name for frontend in self.frontends)]
+        connections = self.determine_connections(predicates)
+        for connection in sorted(connections):
+            logger.info("Connecting %s", connection)
+            self.device.run(
+                [
+                    "sudo",
+                    "snap",
+                    "connect",
+                    f"{connection.plug_snap}:{connection.plug_name}",
+                    f"{connection.slot_snap}:{connection.slot_name}",
+                ]
+            )
+
+    def install_on_device(self):
+        self.install_runtime()
+        self.install_frontends()
+        self.perform_connections()
+        self.restart_frontends()
