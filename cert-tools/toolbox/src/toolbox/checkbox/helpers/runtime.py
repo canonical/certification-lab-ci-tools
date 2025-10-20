@@ -23,7 +23,9 @@ class CheckboxRuntimeHelper:
                 return f"checkbox{match.group(1)}"
             raise ValueError(f"Unable to determine base suffix from {base}")
 
-    def determine_checkbox_runtime(self, snap: SnapSpecifier) -> SnapSpecifier:
+    def determine_checkbox_runtime(
+        self, snap: SnapSpecifier
+    ) -> tuple[SnapSpecifier, str | None]:
         system_info = self.device.interfaces[SnapdAPIClient].get("system-info")
         store = system_info.get("store")
         response = self.info.info_from_refresh(
@@ -37,4 +39,4 @@ class CheckboxRuntimeHelper:
         return SnapSpecifier(
             name=self.determine_checkbox_runtime_name(base),
             channel=replace(snap.channel, track="latest"),
-        )
+        ), store

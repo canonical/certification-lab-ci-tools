@@ -8,7 +8,9 @@ export RUNTIME_NAME=$(get_runtime $FRONTEND_NAME $FRONTEND_TRACK $RISK)
 RUNTIME_CHANNEL="latest/$RISK"
 """
 
+from contextlib import suppress
 import logging
+import os
 from typing import Iterable
 
 from snapstore.client import SnapstoreClient
@@ -18,7 +20,7 @@ from toolbox.entities.connections import Connection, Connector, Predicate, Selec
 from toolbox.entities.snaps import SnapSpecifier
 from toolbox.devices import Device
 from toolbox.interfaces.snapd import SnapdAPIClient
-from toolbox.interfaces.snaps import SnapInterface, SnapInstallError
+from toolbox.interfaces.snaps import SnapInterface, SnapInstallError, SnapNotFoundError
 from toolbox.retries import Linear
 
 
@@ -36,7 +38,7 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
         self.device = device
         self.agent = agent
         self.frontends = frontends
-        self.runtime = CheckboxRuntimeHelper(
+        self.runtime, self.store = CheckboxRuntimeHelper(
             self.device, snapstore
         ).determine_checkbox_runtime(snap=frontends[0])
 
@@ -45,6 +47,14 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
         return f"{self.frontends[0].name}.checkbox-cli"
 
     def install_frontend_snap(self, snap: SnapSpecifier):
+        env = {
+            variable: value
+            for variable, value in {
+                "UBUNTU_STORE_ID": self.store,
+                "UBUNTU_STORE_AUTH": os.environ.get("UBUNTU_STORE_AUTH")
+            }.items()
+            if value is not None
+        }
         self.device.run(
             [
                 "snap",
@@ -52,7 +62,8 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
                 snap.name,
                 f"--channel={snap.channel}",
                 f"--basename={snap.name}",
-            ]
+            ],
+            env=env,
         )
         self.device.run(["sudo", "snap", "ack", f"{snap.name}.assert"])
         try:

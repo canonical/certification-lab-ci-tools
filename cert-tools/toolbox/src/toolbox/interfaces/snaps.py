@@ -15,6 +15,10 @@ class SnapInstallError(RuntimeError):
     pass
 
 
+class SnapNotFoundError(SnapInstallError):
+    pass
+
+
 class SnapInterface(
     DeviceInterface,
     requires=(RebootInterface, SnapdAPIClient, SystemStatusInterface),
@@ -90,9 +94,12 @@ class SnapInterface(
             command.extend(options)
         install_result = self.device.run(command, hide=True)
         if not install_result:
-            raise SnapInstallError(
-                f"Failed to run '{command}': {install_result.stderr}"
+            error_cls = (
+                SnapNotFoundError
+                if "not found" in install_result.stderr
+                else SnapInstallError
             )
+            raise error_cls(f"Failed to run '{command}': {install_result.stderr}")
         snap_change_id = install_result.stdout.strip()
         if not snap_change_id:
             return True

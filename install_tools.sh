@@ -99,7 +99,7 @@ fi
 if [ -z "$SKIP_DEVICE" ]; then
     # ensure that the device is reachable and copy over selected scriptlets
     # (testing reachability with --allow-starting is a single-try fallback option)
-    (wait_for_ssh --allow-degraded || check_for_ssh --allow-starting) \
+    (wait-for-ssh --allow-degraded || check_for_ssh --allow-starting) \
     && echo "Installing selected scriptlets on the device" \
     && install_on_device \
     || exit 1
