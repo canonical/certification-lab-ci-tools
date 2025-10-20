@@ -41,13 +41,31 @@ class TestObserverInterface:
     retrieve or remove rerun requests.
     """
 
-    def __init__(self):
+    def __init__(
+        self,
+        family: Optional[str] = None,
+        limit: Optional[int] = None
+    ):
         # at the moment there is a single Test Observer deployment but
         # the rerun endpoint could be a constructor argument in the future
         self.reruns_endpoint = (
             "https://test-observer-api.canonical.com/v1/"
             "test-executions/reruns"
         )
+        self.family = family
+        self.limit = limit
+
+    def create_get_params(self) -> Dict:
+        """
+        Return the query parameters for the GET request that
+        retrieves the rerun requests from Test Observer
+        """
+        params = {"family": self.family, "limit": self.limit}
+        return {
+            parameter: value
+            for parameter, value in params.items()
+            if value is not None
+        }
 
     def get(self) -> List[dict]:
         """
@@ -55,7 +73,9 @@ class TestObserverInterface:
 
         Raises an HTTPError if the operation fails.
         """
-        response = requests.get(self.reruns_endpoint)
+        response = requests.get(
+            self.reruns_endpoint, params=self.create_get_params()
+        )
         response.raise_for_status()
         return response.json()
 
@@ -282,8 +302,10 @@ class Rerunner:
     corresponding reruns.
     """
 
-    def __init__(self, processor: RequestProcessor):
-        self.test_observer = TestObserverInterface()
+    def __init__(
+        self, interface: TestObserverInterface, processor: RequestProcessor
+    ):
+        self.test_observer = interface
         self.processor = processor
 
     def load_rerun_requests(self) -> List[Dict]:
@@ -377,6 +399,12 @@ def create_rerunner_from_args():
         nargs="?", default="jenkins",
         help="Specify which request rerun processor to use"
     )
+    parser.add_argument(
+        "--family", help="Restrict processing to a specific family of artifacts"
+    )
+    parser.add_argument(
+        "--limit", help="Restrict processing to a specific number of rerun requests"
+    )
     # only for Github processor but too simple to justify using subparsers
     parser.add_argument(
         "--repo", help="Name of Github repository"
@@ -390,7 +418,13 @@ def create_rerunner_from_args():
         )
     else:
         processor = GithubProcessor(environ["GH_TOKEN"], repo=args.repo)
-    return Rerunner(processor)
+
+    return Rerunner(
+        interface=TestObserverInterface(
+            family=args.family, limit=args.limit
+        ),
+        processor=processor
+    )
 
 
 if __name__ == "__main__":

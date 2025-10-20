@@ -26,6 +26,5 @@ find ~ -name 'submission_*.junit.xml' -exec mv {} artifacts/junit.xml \;
 find ~ -name 'submission_*.html' -exec mv {} artifacts/submission.html \;
 find ~ -name 'submission_*.tar.xz' -exec mv {} artifacts/submission.tar.xz \;
 find ~ -name 'submission_*.log' -exec mv {} artifacts/submission.log \;
-tar -xf artifacts/submission.tar.xz -C artifacts submission.json
 
 [ -n "$INCLUDED" ] && cp $INCLUDED artifacts

@@ -1,20 +1,19 @@
 [project]
 name = "snapstore"
-version = "0.3.1"
+version = "0.5"
 description = "Tools for accessing the snap store"
 authors = [
     {name = "George Boukeas", email = "george.boukeas@canonical.com"},
     {name = "Paolo Gentili", email = "paolo.gentili@canonical.com"}
 ]
-requires-python = ">=3.8"
-dependencies = ["requests", "pymacaroons"]
+requires-python = ">=3.10"
+dependencies = ["craft-store"]
 
 [project.scripts]
-get-auth = "snapstore.auth:cli"
-snapstore-info = "snapstore.info:cli"
+snap-info = "snapstore.cli:info_cli"
 
 [project.optional-dependencies]
-dev = ["pytest"]
+dev = ["pytest", "pytest-mock", "tox"]
 
 [build-system]
 requires = ["setuptools>=64", "wheel"]

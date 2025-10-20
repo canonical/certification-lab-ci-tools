@@ -1,0 +1,26 @@
+name: Test the snapstore package
+on:
+  pull_request:
+    branches:
+      - 'main'
+    paths:
+      - 'cert-tools/snapstore/**'
+      - '.github/workflows/test_snapstore.yaml'
+concurrency:
+  # Cancel inprogress runs if new commit pushed
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test-package:
+    name: Test the snapstore package
+    runs-on: [self-hosted, jammy, x64]
+    defaults:
+      run:
+        working-directory: cert-tools/snapstore
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - run: pip install .[dev]
+      - run: tox

@@ -19,7 +19,7 @@ SNAP_CONNECTION_DATA=$(
 )
 
 # process the snap connection data and retrieve the possible connections
-CONNECTIONS=$(echo $SNAP_CONNECTION_DATA | snap_connections $SNAP_NAMES)
+CONNECTIONS=$(echo $SNAP_CONNECTION_DATA | snap_connections $SNAP_NAMES ${SNAP_CONNECTIONS_BLACKLIST:+--blacklist "$SNAP_CONNECTIONS_BLACKLIST"})
 
 if [ -n "$CONNECTIONS" ]; then
     # perform the connections one-by-one

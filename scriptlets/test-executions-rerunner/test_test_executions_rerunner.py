@@ -10,6 +10,16 @@ from test_executions_rerunner import (
 )
 
 
+def test_test_observer_interface_params():
+    interface = TestObserverInterface()
+    assert interface.create_get_params() == {}
+    interface = TestObserverInterface(family="deb")
+    assert interface.create_get_params() == {"family": "deb"}
+    interface = TestObserverInterface(limit=100)
+    assert interface.create_get_params() == {"limit": 100}
+    interface = TestObserverInterface(family="snap", limit=1000)
+
+
 # processors for rerun requests, i.e. interfaces towards Jenkins and Github
 
 @fixture
@@ -204,11 +214,11 @@ expected_processed_per_processor = {
 
 @pytest.fixture
 def rerunner_jenkins(jenkins):
-    return Rerunner(jenkins)
+    return Rerunner(TestObserverInterface(), jenkins)
 
 @pytest.fixture
 def rerunner_github(github_with_repo):
-    return Rerunner(github_with_repo)
+    return Rerunner(TestObserverInterface(), github_with_repo)
 
 
 def test_does_nothing_when_no_reruns_requested(rerunner_jenkins):

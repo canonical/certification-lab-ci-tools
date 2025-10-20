@@ -60,7 +60,7 @@ get_runtime() {
     local RUNTIME_NAME
 
     # get the snap info from the snap store and extract the base
-    SNAPINFO=$(snapstore-info \
+    SNAPINFO=$(snap-info \
         $FRONTEND_NAME $FRONTEND_TRACK/$RISK $(get_ubuntu_arch) \
         ${STORE:+ --store $STORE} --fields base
     )
