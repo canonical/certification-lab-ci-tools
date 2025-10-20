@@ -7,6 +7,7 @@ from fabric import Connection
 from invoke import Context, Result
 from invoke.exceptions import Failure, ThreadException
 from paramiko.config import SSHConfig
+from paramiko.ssh_exception import SSHException
 
 
 from toolbox.interfaces import DeviceInterface
@@ -81,3 +82,5 @@ class RemoteHost(Device):
                 return connection.run(command, warn=True, **kwargs)
             except (Failure, ThreadException, OSError) as error:
                 raise ExecutionError(command, self, error) from error
+            except SSHException as error:
+                return Result(exited=255, stderr=str(error))
