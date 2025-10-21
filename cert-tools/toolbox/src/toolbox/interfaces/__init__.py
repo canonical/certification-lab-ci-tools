@@ -37,4 +37,4 @@ class BooleanResult(NamedTuple):
         return self.ok
 
     def __str__(self) -> str:
-        return f"[{self.ok}]" + f" {self.message}" if self.message else ""
+        return f"[{self.ok}]" + (f" {self.message}" if self.message else "")
