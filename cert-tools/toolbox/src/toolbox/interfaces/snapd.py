@@ -28,7 +28,7 @@ class SnapdAPIClient(DeviceInterface):
             re.MULTILINE,
         )
         if not status_match:
-            raise SnapdAPIError(f"Unable to retrieve status from response {response}")
+            raise SnapdAPIError(f"Unable to extract status from response: {response}")
         return status_match.groupdict()
 
     @staticmethod
@@ -42,7 +42,9 @@ class SnapdAPIClient(DeviceInterface):
     def parse_json_content(response: str) -> dict[str, str]:
         json_match = re.search(r"{.*}", response, re.DOTALL)
         if json_match is None:
-            raise SnapdAPIError("Unable to retrieve application/json content")
+            raise SnapdAPIError(
+                f"Unable to extract application/json content from response: {response}"
+            )
         json_contents_str = json_match.group(0)
         try:
             json_contents = json.loads(json_contents_str)
@@ -61,15 +63,16 @@ class SnapdAPIClient(DeviceInterface):
             echo_stdin=False,
             hide=True,
         )
-        try:
-            status = self.parse_status(response.stdout)
-        except SnapdAPIError:
-            print(response.stdout)
-            print(response.stderr)
-            raise
+        if not response.stdout:
+            raise SnapdAPIError(response.stderr if response.stderr else "No response")
+        status = self.parse_status(response.stdout)
         if status["status_code"] != "200":
+            try:
+                reason_message = f" ({status['reason']})"
+            except KeyError:
+                reason_message = ""
             raise SnapdAPIError(
-                f"Response {status['status_code']} ({status.get('reason', '')}) to request {url}"
+                f"Response {status['status_code']}{reason_message} to request {url}"
             )
         content_type = self.parse_content_type(response.stdout)
         if content_type == "application/json":

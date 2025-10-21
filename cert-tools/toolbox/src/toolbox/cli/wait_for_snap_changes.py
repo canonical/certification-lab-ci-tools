@@ -27,7 +27,7 @@ def main():
         policy=Linear(times=args.times - 1, delay=args.delay),
         status_policy=Linear(delay=10),
     )
-    sys.exit(1 - int(result))
+    sys.exit(1 - int(bool(result)))
 
 
 if __name__ == "__main__":

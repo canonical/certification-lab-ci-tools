@@ -26,7 +26,9 @@ class CheckboxRuntimeHelper:
         # check for errors
         if result["result"] == "error":
             store_message = f" from {store}" if store else ""
-            raise ValueError(f"{snap} on {arch}{store_message}: {result['error']['message']}")
+            raise ValueError(
+                f"{snap} on {arch}{store_message}: {result['error']['message']}"
+            )
         return result["snap"].get("base")
 
     @staticmethod

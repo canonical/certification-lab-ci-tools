@@ -1,9 +1,9 @@
 from functools import partial
 import logging
 
-from toolbox.interfaces import DeviceInterface
+from toolbox.interfaces import DeviceInterface, BooleanResult
 from toolbox.interfaces.reboot import RebootInterface
-from toolbox.interfaces.snapd import SnapdAPIClient
+from toolbox.interfaces.snapd import SnapdAPIClient, SnapdAPIError
 from toolbox.interfaces.status import SystemStatusInterface
 from toolbox.retries import retry, RetryPolicy
 
@@ -11,7 +11,11 @@ from toolbox.retries import retry, RetryPolicy
 logger = logging.getLogger(__name__)
 
 
-class SnapInstallError(RuntimeError):
+class SnapInterfaceError(RuntimeError):
+    pass
+
+
+class SnapInstallError(SnapInterfaceError):
     pass
 
 
@@ -23,35 +27,41 @@ class SnapInterface(
     DeviceInterface,
     requires=(RebootInterface, SnapdAPIClient, SystemStatusInterface),
 ):
-    def get_active(self, snap: str | None = None):
+    def get_active(self, snap: str | None = None) -> dict:
         params = {"snaps": [snap]} if snap else None
         return self.device.interfaces[SnapdAPIClient].get(
             endpoint="snaps", params=params
         )
 
-    def get_changes(self):
+    def get_changes(self) -> dict:
         return self.device.interfaces[SnapdAPIClient].get(
             endpoint="changes", params={"select": "all"}
         )
 
-    def get_change(self, id: str):
+    def get_change(self, id: str) -> dict:
         return self.device.interfaces[SnapdAPIClient].get(endpoint=f"changes/{id}")
 
-    def check_snap_changes_complete(self) -> bool:
-        changes = self.get_changes()
+    def check_snap_changes_complete(self) -> BooleanResult:
+        try:
+            changes = self.get_changes()
+        except SnapdAPIError as error:
+            return BooleanResult(False, str(error))
         complete = all(change["ready"] for change in changes)
         if complete:
             logger.info("No snap operations are ongoing")
-            return True
+            return BooleanResult(True)
         logger.info("Snap operations are ongoing")
-        for change in changes:
-            if not change["ready"]:
-                print(f"{change['id']} {change['status']}: {change['summary']}")
-        return False
+        ongoing_changes = [change for change in changes if not change["ready"]]
+        for change in ongoing_changes:
+            print(f"{change['id']} {change['status']}: {change['summary']}")
+        return BooleanResult(
+            False,
+            "Changes: " + ", ".join(sorted(change["id"] for change in ongoing_changes)),
+        )
 
     def check_snap_changes_complete_and_reboot(
         self, status_policy: RetryPolicy | None = None
-    ) -> bool:
+    ) -> BooleanResult:
         complete = self.check_snap_changes_complete()
         if (
             not complete
@@ -69,7 +79,7 @@ class SnapInterface(
         self,
         policy: RetryPolicy | None = None,
         status_policy: RetryPolicy | None = None,
-    ):
+    ) -> BooleanResult:
         check_snap_changes = partial(
             self.check_snap_changes_complete_and_reboot, status_policy=status_policy
         )

@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import Iterable, Type
+from typing import Iterable, NamedTuple, Type
 
 
 class DeviceInterfaceError(AttributeError):
@@ -27,3 +27,14 @@ class DeviceInterface(ABC):
 
     def attach_to(self, device: "Device"):  # noqa: F821
         self._device = device
+
+
+class BooleanResult(NamedTuple):
+    ok: bool
+    message: str | None = None
+
+    def __bool__(self) -> bool:
+        return self.ok
+
+    def __str__(self) -> str:
+        return f"[{self.ok}]" + f" {self.message}" if self.message else ""
