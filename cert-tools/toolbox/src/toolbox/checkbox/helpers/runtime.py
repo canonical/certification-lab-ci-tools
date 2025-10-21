@@ -2,16 +2,31 @@ from dataclasses import replace
 import re
 
 from snapstore.client import SnapstoreClient
-from snapstore.info import Info
+from snapstore.info import SnapstoreInfo
 from toolbox.devices import Device
 from toolbox.entities.snaps import SnapSpecifier
-from toolbox.interfaces.snapd import SnapdAPIClient
 
 
 class CheckboxRuntimeHelper:
     def __init__(self, device: Device, snapstore: SnapstoreClient):
         self.device = device
-        self.info = Info(snapstore)
+        self.info = SnapstoreInfo(snapstore)
+
+    def get_base(self, snap: SnapSpecifier, arch: str, store: str) -> str | None:
+        response = self.info.get_refresh_info(
+            snap_specifiers=[snap],
+            architecture=arch,
+            store=store,
+            fields=["base"],
+        )
+        # extract what should be a single result from the response
+        if len(response) != 1:
+            raise ValueError(f"Multiple results for {snap} on {arch}")
+        result = response[0]
+        # check for errors
+        if result["result"] == "error":
+            raise ValueError(f"{snap} on {arch}: {result['error']['message']}")
+        return result["snap"].get("base")
 
     @staticmethod
     def determine_checkbox_runtime_name(base: str | None) -> str:
@@ -24,19 +39,10 @@ class CheckboxRuntimeHelper:
             raise ValueError(f"Unable to determine base suffix from {base}")
 
     def determine_checkbox_runtime(
-        self, snap: SnapSpecifier
-    ) -> tuple[SnapSpecifier, str | None]:
-        system_info = self.device.interfaces[SnapdAPIClient].get("system-info")
-        store = system_info.get("store")
-        response = self.info.info_from_refresh(
-            snap=snap.name,
-            channel=str(snap.channel),
-            architecture=system_info["architecture"],
-            store=store,
-            fields=["base"],
-        )
-        base = response.get("base")
+        self, snap: SnapSpecifier, arch: str, store: str
+    ) -> SnapSpecifier:
+        base = self.get_base(snap, arch, store)
         return SnapSpecifier(
             name=self.determine_checkbox_runtime_name(base),
             channel=replace(snap.channel, track="latest"),
-        ), store
+        )

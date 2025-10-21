@@ -21,11 +21,12 @@ from toolbox.interfaces.reboot import RebootInterface
 from toolbox.interfaces.status import SystemStatusInterface
 device = LabDevice(interfaces=[RebootInterface(), SnapdAPIClient(), SnapInterface(), SystemStatusInterface()])
 from snapstore.client import SnapstoreClient
-from snapstore.info import Info
-info = Info(SnapstoreClient())
+from snapstore.craft import create_base_client
+from toolbox.checkbox.installer.snaps import TOKEN_ENVIRONMENT_VARIABLE
+client = SnapstoreClient(create_base_client(TOKEN_ENVIRONMENT_VARIABLE)
 from toolbox.entities.channels import Channel
 from toolbox.entities.snaps import SnapSpecifier
-from toolbox.checkbox.installer import CheckboxInstaller
+from toolbox.checkbox.installer import CheckboxInstaller, TOKEN_ENVIRONMENT_VARIABLE
 installer = CheckboxInstaller(device, info)
 # installer.install(frontends=[SnapSpecifier("checkbox", Channel.from_string("latest/beta"))])
 installer.install(frontends=[SnapSpecifier("checkbox", Channel.from_string("uc24/beta"))])

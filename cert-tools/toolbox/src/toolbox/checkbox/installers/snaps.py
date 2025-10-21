@@ -8,23 +8,25 @@ export RUNTIME_NAME=$(get_runtime $FRONTEND_NAME $FRONTEND_TRACK $RISK)
 RUNTIME_CHANNEL="latest/$RISK"
 """
 
-from contextlib import suppress
 import logging
 import os
 from typing import Iterable
 
 from snapstore.client import SnapstoreClient
-from toolbox.checkbox.installer import CheckboxInstaller
+from toolbox.checkbox.installers import CheckboxInstaller
 from toolbox.checkbox.helpers.runtime import CheckboxRuntimeHelper
 from toolbox.entities.connections import Connection, Connector, Predicate, SelectSnaps
 from toolbox.entities.snaps import SnapSpecifier
 from toolbox.devices import Device
 from toolbox.interfaces.snapd import SnapdAPIClient
-from toolbox.interfaces.snaps import SnapInterface, SnapInstallError, SnapNotFoundError
+from toolbox.interfaces.snaps import SnapInterface, SnapInstallError
 from toolbox.retries import Linear
 
 
 logger = logging.getLogger(__name__)
+
+
+TOKEN_ENVIRONMENT_VARIABLE = "UBUNTU_STORE_AUTH"
 
 
 class CheckboxSnapsInstaller(CheckboxInstaller):
@@ -38,9 +40,13 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
         self.device = device
         self.agent = agent
         self.frontends = frontends
-        self.runtime, self.store = CheckboxRuntimeHelper(
-            self.device, snapstore
-        ).determine_checkbox_runtime(snap=frontends[0])
+        # use store and arch from system info to determine runtime
+        system_info = self.device.interfaces[SnapdAPIClient].get("system-info")
+        self.store = system_info.get("store")
+        runtime_helper = CheckboxRuntimeHelper(self.device, snapstore)
+        self.runtime = runtime_helper.determine_checkbox_runtime(
+            snap=frontends[0], arch=system_info["architecture"], store=self.store
+        )
 
     @property
     def checkbox_cli(self):
@@ -51,7 +57,7 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
             variable: value
             for variable, value in {
                 "UBUNTU_STORE_ID": self.store,
-                "UBUNTU_STORE_AUTH": os.environ.get("UBUNTU_STORE_AUTH")
+                "UBUNTU_STORE_AUTH": os.environ.get(TOKEN_ENVIRONMENT_VARIABLE),
             }.items()
             if value is not None
         }

@@ -1,7 +1,11 @@
 from argparse import ArgumentParser, REMAINDER
 
 from snapstore.client import SnapstoreClient
-from toolbox.checkbox.snaps import CheckboxSnapsInstaller
+from snapstore.craft import create_base_client
+from toolbox.checkbox.installers.snaps import (
+    CheckboxSnapsInstaller,
+    TOKEN_ENVIRONMENT_VARIABLE,
+)
 from toolbox.devices import LocalHost
 from toolbox.devices.lab import LabDevice
 from toolbox.entities.snaps import SnapSpecifier
@@ -39,7 +43,7 @@ def main():
         device=device,
         agent=LocalHost(),
         frontends=frontends,
-        snapstore=SnapstoreClient(),
+        snapstore=SnapstoreClient(create_base_client(TOKEN_ENVIRONMENT_VARIABLE)),
     )
     installer.install()
 
