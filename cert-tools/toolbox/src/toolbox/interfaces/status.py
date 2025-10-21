@@ -31,6 +31,12 @@ class SystemStatusInterface(DeviceInterface):
             logger.error(error)
             return SystemStatus(exited=255)
         status = result.stdout.strip()
+        if not status:
+            logger.info(
+                "Unable to retrieve status from '%s'",
+                self.device.host,
+            )
+            return SystemStatus(result.exited)
         allowed = {"running"}.union(allowed or set())
         allowed_message = ", ".join(allowed)
         logger.info(
