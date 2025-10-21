@@ -71,7 +71,7 @@ class SnapdAPIClient(DeviceInterface):
             raise SnapdAPIError(
                 f"Response {status['status_code']} ({status.get('reason', '')}) to request {url}"
             )
-        content_type = self.parse_content_type(response)
+        content_type = self.parse_content_type(response.stdout)
         if content_type == "application/json":
-            return self.parse_json_content(response)["result"]
+            return self.parse_json_content(response.stdout)["result"]
         raise SnapdAPIError(f"Unable to parse content type: {content_type}")
