@@ -40,12 +40,13 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
         self.device = device
         self.agent = agent
         self.frontends = frontends
-        # use store and arch from system info to determine runtime
-        system_info = self.device.interfaces[SnapdAPIClient].get("system-info")
-        self.store = system_info.get("store")
+        # use store and arch from model or system info to determine runtime
+        system = self.device.interfaces[SnapdAPIClient].get("system-info")
+        model = self.device.interfaces[SnapdAPIClient].get("model")[0]
+        self.store = model.get("store") or system.get("store")
         runtime_helper = CheckboxRuntimeHelper(self.device, snapstore)
         self.runtime = runtime_helper.determine_checkbox_runtime(
-            snap=frontends[0], arch=system_info["architecture"], store=self.store
+            snap=frontends[0], arch=system["architecture"], store=self.store
         )
 
     @property

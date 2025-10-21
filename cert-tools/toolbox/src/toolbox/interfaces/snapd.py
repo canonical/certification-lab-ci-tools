@@ -2,6 +2,7 @@ from io import StringIO
 import json
 import re
 from urllib.parse import urlencode
+import yaml
 
 from toolbox.interfaces import DeviceInterface
 
@@ -39,7 +40,7 @@ class SnapdAPIClient(DeviceInterface):
         return content_match.group("content_type")
 
     @staticmethod
-    def parse_json_content(response: str) -> dict[str, str]:
+    def parse_json(response: str) -> dict[str, str]:
         json_match = re.search(r"{.*}", response, re.DOTALL)
         if json_match is None:
             raise SnapdAPIError(
@@ -53,6 +54,11 @@ class SnapdAPIClient(DeviceInterface):
                 f"Unable to parse application/json content: {json_contents_str}"
             ) from error
         return json_contents
+
+    @staticmethod
+    def parse_assertions(response: str) -> dict:
+        parts = re.split(r"\n\n|\r\n\r\n", response)
+        return [yaml.safe_load(part) for part in parts[1:-1]]
 
     def get(self, endpoint: str, params: dict = None) -> dict:
         url = self.create_get_request_url(endpoint, params)
@@ -76,5 +82,7 @@ class SnapdAPIClient(DeviceInterface):
             )
         content_type = self.parse_content_type(response.stdout)
         if content_type == "application/json":
-            return self.parse_json_content(response.stdout)["result"]
+            return self.parse_json(response.stdout)["result"]
+        if content_type == "application/x.ubuntu.assertion":
+            return self.parse_assertions(response.stdout)
         raise SnapdAPIError(f"Unable to parse content type: {content_type}")
