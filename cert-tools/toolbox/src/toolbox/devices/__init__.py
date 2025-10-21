@@ -56,7 +56,7 @@ class LocalHost(Device):
         try:
             return Context().run(command, warn=True, **kwargs)
         except (Failure, ThreadException, OSError) as error:
-            raise ExecutionError(command, self, error) from error
+            return Result(exited=255, stderr=str(error))
 
 
 class RemoteHost(Device):
@@ -80,7 +80,5 @@ class RemoteHost(Device):
         with self.create_connection() as connection:
             try:
                 return connection.run(command, warn=True, **kwargs)
-            except (Failure, ThreadException, OSError) as error:
-                raise ExecutionError(command, self, error) from error
-            except SSHException as error:
+            except (SSHException, Failure, ThreadException, OSError) as error:
                 return Result(exited=255, stderr=str(error))
