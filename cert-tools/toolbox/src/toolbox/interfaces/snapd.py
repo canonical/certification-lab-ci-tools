@@ -60,8 +60,13 @@ class SnapdAPIClient(DeviceInterface):
             in_stream=StringIO(request),
             echo_stdin=False,
             hide=True,
-        ).stdout
-        status = self.parse_status(response)
+        )
+        try:
+            status = self.parse_status(response.stdout)
+        except SnapdAPIError:
+            print(response.stdout)
+            print(response.stderr)
+            raise
         if status["status_code"] != "200":
             raise SnapdAPIError(
                 f"Response {status['status_code']} ({status.get('reason', '')}) to request {url}"
