@@ -130,7 +130,9 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
 
     def determine_connections(self, predicates: Iterable[Predicate]) -> set[Connection]:
         connector = Connector(predicates)
-        snap_connection_data = self.device.interfaces[SnapdAPIClient].get("connections")
+        snap_connection_data = self.device.interfaces[SnapdAPIClient].get(
+            "connections", params={"select": "all"}
+        )
         return connector.process(snap_connection_data)
 
     def perform_connections(self):
