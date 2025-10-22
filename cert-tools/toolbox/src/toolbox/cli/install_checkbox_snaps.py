@@ -1,4 +1,4 @@
-from argparse import ArgumentParser, REMAINDER
+from argparse import ArgumentParser
 from pathlib import Path
 
 from snapstore.client import SnapstoreClient
@@ -25,7 +25,7 @@ def main():
     parser.add_argument(
         "--additional",
         dest="frontends",
-        nargs=REMAINDER,
+        nargs="+",
         help="Specify additional frontend snap specs",
     )
     parser.add_argument(
