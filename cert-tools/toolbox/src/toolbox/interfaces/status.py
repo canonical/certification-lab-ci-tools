@@ -1,3 +1,5 @@
+"""Interface for checking systemd system status."""
+
 from functools import partial
 import logging
 from typing import Iterable
@@ -11,7 +13,10 @@ logger = logging.getLogger(__name__)
 
 
 class SystemStatusInterface(DeviceInterface):
+    """Provides systemd system status checking capabilities."""
+
     def get_status(self, allowed: Iterable[str] | None = None) -> BooleanResult:
+        """Check if system status is in the allowed set (defaults to 'running')."""
         try:
             result = self.device.run(
                 command=["systemctl", "is-system-running"], hide=True
@@ -37,6 +42,7 @@ class SystemStatusInterface(DeviceInterface):
     def wait_for_status(
         self, allowed: Iterable[str] | None = None, policy: RetryPolicy | None = None
     ) -> BooleanResult:
+        """Wait for system status to reach an allowed state, retrying with the given policy."""
         get_status_with_allowed = partial(self.get_status, allowed=allowed)
         get_status_with_allowed.__name__ = self.get_status.__name__
         return retry(get_status_with_allowed, policy=policy)

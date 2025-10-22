@@ -1,3 +1,5 @@
+"""Lab device with SSH configuration from environment variables."""
+
 import logging
 import os
 from typing import Iterable
@@ -17,6 +19,8 @@ class LabExecutionError(RuntimeError):
 
 
 class LabDevice(RemoteHost):
+    """Remote lab device configured through DEVICE_IP and DEVICE_USER."""
+
     ssh_options = [
         "StrictHostKeyChecking=no",
         "UserKnownHostsFile=/dev/null",
@@ -43,4 +47,5 @@ class LabDevice(RemoteHost):
 
     @classmethod
     def create_config(cls):
+        """Create SSH config with the lab-specific SSH options."""
         return Config(ssh_config=SSHConfig.from_text("\n".join(cls.ssh_options)))

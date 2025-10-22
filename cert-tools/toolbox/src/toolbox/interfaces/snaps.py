@@ -1,3 +1,5 @@
+"""Interface for managing snap packages on devices."""
+
 from functools import partial
 import logging
 
@@ -28,21 +30,27 @@ class SnapInterface(
     DeviceInterface,
     requires=(RebootInterface, SnapdAPIClient, SystemStatusInterface),
 ):
+    """Provides snap package management capabilities."""
+
     def get_active(self, snap: str | None = None) -> dict:
+        """Get active snap(s) from the device."""
         params = {"snaps": [snap]} if snap else None
         return self.device.interfaces[SnapdAPIClient].get(
             endpoint="snaps", params=params
         )
 
     def get_changes(self) -> dict:
+        """Get all snap changes from the device."""
         return self.device.interfaces[SnapdAPIClient].get(
             endpoint="changes", params={"select": "all"}
         )
 
     def get_change(self, id: str) -> dict:
+        """Get a specific snap change by ID."""
         return self.device.interfaces[SnapdAPIClient].get(endpoint=f"changes/{id}")
 
     def check_snap_changes_complete(self) -> BooleanResult:
+        """Check if all snap changes are in a "ready" state."""
         try:
             changes = self.get_changes()
         except SnapdAPIError as error:
@@ -63,6 +71,7 @@ class SnapInterface(
     def check_snap_changes_complete_and_reboot(
         self, status_policy: RetryPolicy | None = None
     ) -> BooleanResult:
+        """Check if snap changes are in a "ready" state, rebooting if needed."""
         complete = self.check_snap_changes_complete()
         if (
             not complete
@@ -70,7 +79,7 @@ class SnapInterface(
         ):
             logger.info("Manually rebooting to complete waiting snap changes...")
             self.device.interfaces[RebootInterface].reboot()
-            self.device.interfaces[SystemStatusInterface].wait_for_running(
+            self.device.interfaces[SystemStatusInterface].wait_for_status(
                 allowed={"degraded"}, policy=status_policy
             )
             complete = self.check_snap_changes_complete()
@@ -81,6 +90,7 @@ class SnapInterface(
         policy: RetryPolicy | None = None,
         status_policy: RetryPolicy | None = None,
     ) -> BooleanResult:
+        """Wait for snap changes to complete, retrying with the given policy."""
         check_snap_changes = partial(
             self.check_snap_changes_complete_and_reboot, status_policy=status_policy
         )
@@ -97,6 +107,14 @@ class SnapInterface(
         refresh_ok: bool = False,
         policy: RetryPolicy | None = None,
     ) -> bool:
+        """Install or refresh a snap package.
+
+        The action is always performed asynchronously (i.e. with the
+        `--no-wait` flag), followed by a wait for all snap changes to
+        reach the "ready" state. This is because the action itself or
+        an auto-refresh in the background may cause the device to reboot,
+        and this approach protects against that.
+        """
         action = "refresh" if self.get_active(snap) and refresh_ok else "install"
         command = ["sudo", "snap", action, "--no-wait", snap]
         if channel:
@@ -124,64 +142,3 @@ class SnapInterface(
             raise SnapInstallError(
                 f"Snap change {snap_change_id} incomplete: {snap_change['status']}"
             )
-
-
-"""
-class SnapAction(NamedTuple):
-    action: str
-    snap: str
-    channel: SnapChannel | None = None
-
-    def __str__(self):
-        return " ".join(str(component) for component in self if component)
-
-
-class SnapInstaller:
-
-    def __init__(self, targets: Iterable[SnapDict]):
-        self.target_index = self.create_index(targets)
-
-    @staticmethod
-    def create_index(snaps: Iterable[SnapDict]):
-        return {
-            snap["name"]: (
-                SnapChannel.from_string(channel)
-                if (
-                    "channel" in snap and
-                    (channel := snap["channel"]) or
-                    "tracking-channel" in snap and
-                    (channel := snap["tracking-channel"])
-                )
-                else None
-            )
-            for snap in snaps
-        }
-
-    @staticmethod
-    def action(snap: str, target_channel: SnapChannel, active_channel: SnapChannel | None = None):
-        if not active_channel:
-            return SnapAction("install", snap=snap, channel=target_channel)
-        if target_channel != active_channel:
-            return SnapAction("refresh", snap=snap, channel=target_channel)
-        return SnapAction("refresh", snap=snap)
-
-    def process(self, active: Iterable[SnapDict]):
-        active_index = self.create_index(active)
-        actions = []
-        # iterate over active, untargeted snaps and refresh to stable
-        for snap, active_channel in active_index.items():
-            if snap not in self.target_index:
-                actions.append(
-                    self.action(snap, active_channel.stabilize(), active_channel)
-                )
-        # iterate over targeted staps and install or refresh to target
-        for snap, target_channel in self.target_index.items():
-            active_channel = active_index.get(snap)
-            actions.append(
-                self.action(snap, target_channel, active_channel)
-            )
-        return actions
-
-    installer = SnapInstaller(args.targets)
-    actions = installer.process(args.active)
-"""

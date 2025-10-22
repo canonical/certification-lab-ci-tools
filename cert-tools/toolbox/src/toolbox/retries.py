@@ -1,3 +1,5 @@
+"""Retry mechanisms with configurable policies."""
+
 from abc import ABC, abstractmethod
 from itertools import repeat
 import logging
@@ -9,17 +11,23 @@ logger = logging.getLogger(__name__)
 
 
 class RetryPolicy(ABC):
+    """Abstract base class for retry policies."""
+
     @abstractmethod
     def waits(self):
+        """Generate wait times between retries."""
         raise NotImplementedError
 
 
 class Linear(RetryPolicy):
+    """Retry policy with constant delay between attempts."""
+
     def __init__(self, times: int | None = None, delay: float = 0):
         self.times = times
         self.delay = delay
 
     def waits(self):
+        """Generate constant wait times, optionally limited by retry count."""
         if self.times is None:
             yield from repeat(self.delay)
         else:
@@ -27,6 +35,7 @@ class Linear(RetryPolicy):
 
 
 def retry(script: Callable, policy: RetryPolicy | None = None) -> Any:
+    """Execute script with retries until it returns a truthy value."""
     if not policy:
         policy = Linear()
 
