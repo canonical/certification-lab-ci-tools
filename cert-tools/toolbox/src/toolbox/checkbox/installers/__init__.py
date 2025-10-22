@@ -16,6 +16,10 @@ class CheckboxInstallerError(Exception):
 """
 from toolbox.devices.lab import LabDevice
 from toolbox.interfaces.snapd import SnapdAPIClient
+device = LabDevice(interfaces=[SnapdAPIClient()])
+
+from toolbox.devices.lab import LabDevice
+from toolbox.interfaces.snapd import SnapdAPIClient
 from toolbox.interfaces.snaps import SnapInterface
 from toolbox.interfaces.reboot import RebootInterface
 from toolbox.interfaces.status import SystemStatusInterface
