@@ -123,7 +123,17 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
         self.device.run(["sudo", "snap", "set", frontend.name, "agent=enabled"])
         self.device.run(["sudo", "snap", "set", frontend.name, "slave=enabled"])
 
-    def restart_frontends(self):
+    def restart(self):
+        # some versions of snapd seem to force dependencies to be stable in some situation
+        # but we want a specific risk, so lets force it by re-installing it
+        # Note: this is done twice because if snapd doesn't force the stable dependency
+        #       then this causes just 1 download
+        logger.info("Refreshing runtime snap: %s", self.runtime.name)
+        self.device.interfaces[SnapInterface].install(
+            self.runtime.name,
+            self.runtime.channel,
+            policy=Linear(times=30, delay=10),
+        )
         frontend = self.frontends[0]
         logger.info("Restarting primary frontend snap: %s", frontend.name)
         self.device.run(["sudo", "snap", "restart", frontend.name])
@@ -156,4 +166,4 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
         self.install_runtime()
         self.install_frontends()
         self.perform_connections()
-        self.restart_frontends()
+        self.restart()
