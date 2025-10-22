@@ -33,7 +33,7 @@ def main():
     result = device.interfaces[SystemStatusInterface].wait_for_status(
         allowed=allowed, policy=Linear(times=args.times - 1, delay=args.delay)
     )
-    sys.exit(result.exited)
+    sys.exit(1 - int(bool(result)))
 
 
 if __name__ == "__main__":
