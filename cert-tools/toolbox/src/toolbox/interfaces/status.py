@@ -24,7 +24,7 @@ class SystemStatusInterface(DeviceInterface):
         status = result.stdout.strip()
         if not status:
             logger.info("No status retrieved from %s", self.device.host)
-            return BooleanResult(result.exited == 0)
+            return BooleanResult(bool(result))
         allowed = {"running"}.union(allowed or set())
         logger.info(
             "Checking status of %s: %s (allowed: %s)",
@@ -32,7 +32,7 @@ class SystemStatusInterface(DeviceInterface):
             status,
             ", ".join(allowed),
         )
-        return BooleanResult(status in allowed)
+        return BooleanResult(status in allowed, message=status)
 
     def wait_for_status(
         self, allowed: Iterable[str] | None = None, policy: RetryPolicy | None = None

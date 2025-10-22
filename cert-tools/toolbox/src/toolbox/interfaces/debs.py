@@ -3,7 +3,6 @@ from typing import Iterable
 
 from invoke import Result
 
-# from toolbox.result import ExecutionResult
 from toolbox.interfaces import DeviceInterface
 from toolbox.retries import retry, RetryPolicy
 
@@ -37,14 +36,17 @@ class DebInterface(DeviceInterface):
         return result.exited == 0
 
     def update(self) -> bool:
+        logger.info("Updating")
         return self.action("update")
 
     def upgrade(self, options: Iterable[str] | None = None) -> bool:
+        logger.info("Upgrading")
         return self.action("dist-upgrade", options)
 
     def install(
         self, packages: Iterable[str], options: Iterable[str] | None = None
     ) -> bool:
+        logger.info("Installing packages: %s", ", ".join(packages))
         return self.action("install", packages + (options or []))
 
     def are_package_processes_ongoing(self) -> Result:
@@ -53,7 +55,7 @@ class DebInterface(DeviceInterface):
     def are_package_files_open(self) -> Result:
         return self.device.run(["sudo", "fuser"] + self.files, hide=True)
 
-    def check_complete(self):
+    def check_complete(self) -> bool:
         processes = self.are_package_processes_ongoing()
         files = self.are_package_files_open()
         complete = not processes and not files
