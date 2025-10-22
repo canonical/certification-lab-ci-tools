@@ -1,4 +1,5 @@
 from argparse import ArgumentParser, REMAINDER
+from pathlib import Path
 
 from snapstore.client import SnapstoreClient
 from snapstore.craft import create_base_client
@@ -8,6 +9,7 @@ from toolbox.checkbox.installers.snaps import (
 )
 from toolbox.devices import LocalHost
 from toolbox.devices.lab import LabDevice
+from toolbox.checkbox.helpers.connector import Blacklist
 from toolbox.entities.snaps import SnapSpecifier
 from toolbox.interfaces.reboot import RebootInterface
 from toolbox.interfaces.snaps import SnapInterface
@@ -25,6 +27,9 @@ def main():
         dest="frontends",
         nargs=REMAINDER,
         help="Specify additional frontend snap specs",
+    )
+    parser.add_argument(
+        "--blacklist", type=Path, help="Path to the connections blacklist"
     )
     args = parser.parse_args()
 
@@ -44,6 +49,7 @@ def main():
         agent=LocalHost(),
         frontends=frontends,
         snapstore=SnapstoreClient(create_base_client(TOKEN_ENVIRONMENT_VARIABLE)),
+        predicates=[Blacklist.from_file(args.blacklist)] if args.blacklist else None,
     )
     installer.install()
 

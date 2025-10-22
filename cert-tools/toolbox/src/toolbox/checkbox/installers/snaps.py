@@ -10,12 +10,11 @@ RUNTIME_CHANNEL="latest/$RISK"
 
 import logging
 import os
-from typing import Iterable
 
 from snapstore.client import SnapstoreClient
 from toolbox.checkbox.installers import CheckboxInstaller
 from toolbox.checkbox.helpers.runtime import CheckboxRuntimeHelper
-from toolbox.entities.connections import Connection, Connector, Predicate, SelectSnaps
+from toolbox.checkbox.helpers.connector import SnapConnector, Predicate, SelectSnaps
 from toolbox.entities.snaps import SnapSpecifier
 from toolbox.devices import Device
 from toolbox.interfaces.snapd import SnapdAPIClient
@@ -36,6 +35,7 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
         agent: Device,
         frontends: list[SnapSpecifier],
         snapstore: SnapstoreClient,
+        predicates: list[Predicate] | None = None,
     ):
         self.device = device
         self.agent = agent
@@ -47,6 +47,12 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
         runtime_helper = CheckboxRuntimeHelper(self.device, snapstore)
         self.runtime = runtime_helper.determine_checkbox_runtime(
             snap=frontends[0], arch=system["architecture"], store=self.store
+        )
+        self.connector = SnapConnector(
+            predicates=(
+                [SelectSnaps(frontend.name for frontend in self.frontends)]
+                + (predicates if predicates else [])
+            )
         )
 
     @property
@@ -123,6 +129,25 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
         self.device.run(["sudo", "snap", "set", frontend.name, "agent=enabled"])
         self.device.run(["sudo", "snap", "set", frontend.name, "slave=enabled"])
 
+    def perform_connections(self):
+        snap_connection_data = self.device.interfaces[SnapdAPIClient].get(
+            "connections", params={"select": "all"}
+        )
+        connections, messages = self.connector.process(snap_connection_data)
+        for connection in sorted(connections):
+            logger.info("Connecting %s", connection)
+            self.device.run(
+                [
+                    "sudo",
+                    "snap",
+                    "connect",
+                    f"{connection.plug_snap}:{connection.plug_name}",
+                    f"{connection.slot_snap}:{connection.slot_name}",
+                ]
+            )
+        for message in messages:
+            logger.info(message)
+
     def restart(self):
         # some versions of snapd seem to force dependencies to be stable in some situation
         # but we want a specific risk, so lets force it by re-installing it
@@ -137,30 +162,6 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
         frontend = self.frontends[0]
         logger.info("Restarting primary frontend snap: %s", frontend.name)
         self.device.run(["sudo", "snap", "restart", frontend.name])
-
-    def determine_connections(self, predicates: Iterable[Predicate]) -> set[Connection]:
-        connector = Connector(predicates)
-        snap_connection_data = self.device.interfaces[SnapdAPIClient].get(
-            "connections", params={"select": "all"}
-        )
-        return connector.process(snap_connection_data)
-
-    def perform_connections(self):
-        # perform possible connections with frontend snap plugs
-        # [TODO] Add blacklist
-        predicates = [SelectSnaps(frontend.name for frontend in self.frontends)]
-        connections = self.determine_connections(predicates)
-        for connection in sorted(connections):
-            logger.info("Connecting %s", connection)
-            self.device.run(
-                [
-                    "sudo",
-                    "snap",
-                    "connect",
-                    f"{connection.plug_snap}:{connection.plug_name}",
-                    f"{connection.slot_snap}:{connection.slot_name}",
-                ]
-            )
 
     def install_on_device(self):
         self.install_runtime()
