@@ -71,6 +71,7 @@ class CheckboxInstaller(ABC):
                 "pipx",
                 "install",
                 f"git+https://github.com/canonical/checkbox.git@{commit}#subdirectory=checkbox-ng",
+                "--force",
             ]
         )
 
