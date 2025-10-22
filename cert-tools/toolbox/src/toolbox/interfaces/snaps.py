@@ -1,10 +1,11 @@
 from functools import partial
 import logging
 
-from toolbox.interfaces import DeviceInterface, BooleanResult
+from toolbox.interfaces import DeviceInterface
 from toolbox.interfaces.reboot import RebootInterface
 from toolbox.interfaces.snapd import SnapdAPIClient, SnapdAPIError
 from toolbox.interfaces.status import SystemStatusInterface
+from toolbox.results import BooleanResult
 from toolbox.retries import retry, RetryPolicy
 
 

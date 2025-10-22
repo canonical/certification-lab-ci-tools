@@ -26,11 +26,7 @@ class SnapdAPIClient(DeviceInterface):
     def parse_header(raw_header: str) -> dict:
         header_lines = [line.strip() for line in raw_header.split("\n")]
         status = header_lines[0].split(maxsplit=2)
-        header = {
-            "status": {
-                "status-code": status[1]
-            }
-        }
+        header = {"status": {"status-code": status[1]}}
         if status[2]:
             header["status"]["reason"] = status[2]
         for header_line in header_lines[1:]:
