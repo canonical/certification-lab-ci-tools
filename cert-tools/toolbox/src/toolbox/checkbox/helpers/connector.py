@@ -168,4 +168,4 @@ class SnapConnector:
                     if all(results):
                         connections.add(SnapConnection.from_dicts(plug, slot))
                     aggregate_messages.extend(filter(bool, messages))
-        return connections, messages
+        return connections, aggregate_messages
