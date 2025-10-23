@@ -22,6 +22,7 @@ TOKEN_ENVIRONMENT_VARIABLE = "UBUNTU_STORE_AUTH"
 
 class CheckboxSnapsInstaller(CheckboxInstaller):
     """Installer for Checkbox frontend and runtime snaps on a device."""
+
     def __init__(
         self,
         device: Device,

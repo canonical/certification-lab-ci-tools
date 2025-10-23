@@ -96,4 +96,4 @@ class RemoteHost(Device):
             try:
                 return connection.run(command, warn=True, **kwargs)
             except (SSHException, Failure, ThreadException, OSError) as error:
-                return Result(exited=255, stderr=str(error))
+                return Result(command=command, exited=255, stderr=repr(error))

@@ -39,6 +39,8 @@ def retry(script: Callable, policy: RetryPolicy | None = None) -> Any:
     if not policy:
         policy = Linear()
 
+    script_name = getattr(script, "__name__", repr(script))
+
     result = script()
     if result:
         return result
@@ -46,15 +48,15 @@ def retry(script: Callable, policy: RetryPolicy | None = None) -> Any:
     for wait in policy.waits():
         logger.info(
             "%s returned %s, retrying%s",
-            script.__name__,
+            script_name,
             result,
             f" in {wait} seconds" if wait else "",
         )
         sleep(wait)
         result = script()
         if result:
-            logger.info("%s returned %s", script.__name__, result)
+            logger.info("%s returned %s", script_name, result)
             return result
 
-    logger.error("Unable to complete '%s'", script.__name__)
+    logger.error("Unable to complete '%s'", script_name)
     return result
