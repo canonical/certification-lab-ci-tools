@@ -1,3 +1,5 @@
+"""Base classes for Checkbox installation on devices."""
+
 from abc import ABC, abstractmethod
 import logging
 
@@ -13,31 +15,9 @@ class CheckboxInstallerError(Exception):
     pass
 
 
-"""
-from toolbox.devices.lab import LabDevice
-from toolbox.interfaces.snapd import SnapdAPIClient
-device = LabDevice(interfaces=[SnapdAPIClient()])
-
-from toolbox.devices.lab import LabDevice
-from toolbox.interfaces.snapd import SnapdAPIClient
-from toolbox.interfaces.snaps import SnapInterface
-from toolbox.interfaces.reboot import RebootInterface
-from toolbox.interfaces.status import SystemStatusInterface
-device = LabDevice(interfaces=[RebootInterface(), SnapdAPIClient(), SnapInterface(), SystemStatusInterface()])
-from snapstore.client import SnapstoreClient
-from snapstore.craft import create_base_client
-from toolbox.checkbox.installer.snaps import TOKEN_ENVIRONMENT_VARIABLE
-client = SnapstoreClient(create_base_client(TOKEN_ENVIRONMENT_VARIABLE)
-from toolbox.entities.channels import Channel
-from toolbox.entities.snaps import SnapSpecifier
-from toolbox.checkbox.installer import CheckboxInstaller, TOKEN_ENVIRONMENT_VARIABLE
-installer = CheckboxInstaller(device, info)
-# installer.install(frontends=[SnapSpecifier("checkbox", Channel.from_string("latest/beta"))])
-installer.install(frontends=[SnapSpecifier("checkbox", Channel.from_string("uc24/beta"))])
-"""
-
-
 class CheckboxInstaller(ABC):
+    """Abstract base class for installing Checkbox on a device and agent."""
+
     def __init__(self, device: Device, agent: Device):
         self.device = device
         self.agent = agent
@@ -45,9 +25,11 @@ class CheckboxInstaller(ABC):
     @property
     @abstractmethod
     def checkbox_cli(self, *args, **kwargs) -> str:
+        """Return the command to invoke the Checkbox CLI on the device."""
         raise NotImplementedError
 
     def check_service(self):
+        """Check that the Checkbox service is active on the device."""
         logger.info(
             "Checking if the Checkbox service is active on %s", self.device.host
         )
@@ -58,6 +40,7 @@ class CheckboxInstaller(ABC):
             )
 
     def get_version(self) -> str:
+        """Get the Checkbox version installed on the device."""
         result = self.device.run([self.checkbox_cli, "--version"])
         if not result:
             raise CheckboxInstallerError(
@@ -66,6 +49,7 @@ class CheckboxInstaller(ABC):
         return result.stdout.strip()
 
     def install_from_source_on_agent(self, version: str):
+        """Install matching Checkbox version from source on the agent using pipx."""
         logger.info(
             "Installing Checkbox %s on the agent container from source", version
         )
@@ -81,9 +65,11 @@ class CheckboxInstaller(ABC):
 
     @abstractmethod
     def install_on_device(self, *args, **kwargs):
+        """Install Checkbox on the device."""
         raise NotImplementedError
 
     def install(self, *args, **kwargs):
+        """Install Checkbox on both device and agent, ensuring versions match."""
         self.install_on_device(*args, **kwargs)
         self.check_service()
         version = self.get_version()

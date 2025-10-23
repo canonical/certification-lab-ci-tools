@@ -1,3 +1,5 @@
+"""Helper for automatically determining snap interface connections."""
+
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from pathlib import Path
@@ -21,6 +23,8 @@ class PredicateCheckResult(NamedTuple):
 
 
 class Predicate(ABC):
+    """Base class for connection selection predicates."""
+
     @abstractmethod
     def check(self, plug: PlugDict, slot: SlotDict) -> PredicateCheckResult:
         """
@@ -31,6 +35,8 @@ class Predicate(ABC):
 
 
 class MatchAttributes(Predicate):
+    """Predicate that checks if plug and slot attributes match."""
+
     @staticmethod
     def check(plug: PlugDict, slot: SlotDict) -> PredicateCheckResult:
         """
@@ -77,23 +83,25 @@ class DifferentSnaps(Predicate):
 
 
 class SelectSnaps(Predicate):
-    """Only select connections plugging specific snaps."""
+    """Predicate that only selects connections where the plug snap is in a specific set."""
 
     def __init__(self, snaps: list[str]):
         self.snaps = set(snaps)
 
     def check(self, plug: PlugDict, slot: SlotDict) -> PredicateCheckResult:
+        """Return True if the plug snap is in the selected set."""
         return PredicateCheckResult(plug["snap"] in self.snaps)
 
 
 class Blacklist(Predicate):
-    """Only select connections that haven't been blacklisted."""
+    """Predicate that filters out blacklisted connections."""
 
     def __init__(self, blacklist: list[SnapConnection]):
         self.blacklist = blacklist
 
     @classmethod
     def from_dict(cls, blacklist_data: dict) -> "Blacklist":
+        """Create a Blacklist from a dictionary."""
         return cls(
             [
                 SnapConnection(
@@ -109,11 +117,13 @@ class Blacklist(Predicate):
 
     @classmethod
     def from_file(cls, path: Path) -> "Blacklist":
+        """Load a Blacklist from a YAML file."""
         with open(path) as file:
             blacklist_data = yaml.safe_load(file)
             return cls.from_dict(blacklist_data)
 
     def check(self, plug: PlugDict, slot: SlotDict) -> PredicateCheckResult:
+        """Return True if the connection is not blacklisted."""
         result = not any(
             (entry.plug_snap is None or entry.plug_snap == plug["snap"])
             and (entry.plug_name is None or entry.plug_name == plug["plug"])
@@ -130,18 +140,24 @@ class Blacklist(Predicate):
 
 
 class SnapConnector:
+    """Automatically determine snap interface connections using configurable predicates."""
+
     def __init__(self, predicates: list[Predicate] | None = None):
         # specify the predicate functions that will be used by default
-        # to select or filter out possible connections between plus and slots
+        # to select or filter out possible connections between plugs and slots
         self.predicates = [MatchAttributes, DifferentSnaps]
         # additional user-provided filtering predicates
         if predicates:
             self.predicates.extend(predicates)
 
     def process(self, snap_connection_data) -> tuple[set[SnapConnection], list[str]]:
-        """
-        Process the output of the `connections` endpoint of the snapd API
-        and return a set of possible connections (`Connection` objects).
+        """Process snapd connection data and return connections that satisfy all predicates.
+
+        The snapd connection data should be the output of the `connections` endpoint
+        of the snapd API.
+
+        The second item in the returned tuple is a list of messages (optionally) returned
+        by the predicates, e.g. detailing which possible connections are blacklisted.
 
         Note: the output will not include possible connections for plugs
         that are already connected but it will connect a plug to multiple

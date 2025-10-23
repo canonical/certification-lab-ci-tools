@@ -1,12 +1,4 @@
-"""
-# get the store token from the device, if available
-export STORE=$(_run "snap model --assertion" | sed -n 's/^store:\s\(.*\)$/\1/p')
-
-# use the frontend to derive the Checkbox runtime to be installed
-export RUNTIME_NAME=$(get_runtime $FRONTEND_NAME $FRONTEND_TRACK $RISK)
-[ "$?" -ne 0 ] && exit 1
-RUNTIME_CHANNEL="latest/$RISK"
-"""
+"""Checkbox installer for snap-based installations."""
 
 import logging
 import os
@@ -29,6 +21,7 @@ TOKEN_ENVIRONMENT_VARIABLE = "UBUNTU_STORE_AUTH"
 
 
 class CheckboxSnapsInstaller(CheckboxInstaller):
+    """Installer for Checkbox frontend and runtime snaps on a device."""
     def __init__(
         self,
         device: Device,
@@ -57,9 +50,11 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
 
     @property
     def checkbox_cli(self):
+        """Return the command to invoke the Checkbox CLI from the primary frontend snap."""
         return f"{self.frontends[0].name}.checkbox-cli"
 
     def install_frontend_snap(self, snap: SnapSpecifier):
+        """Download and install a Checkbox frontend snap, trying devmode first then classic."""
         env = {
             variable: value
             for variable, value in {
@@ -109,6 +104,7 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
         return strict
 
     def install_runtime(self):
+        """Install the appropriate Checkbox runtime snap for the frontend."""
         logger.info(
             "Installing Checkbox runtime snap: %s from %s",
             self.runtime.name,
@@ -119,6 +115,7 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
         )
 
     def install_frontends(self):
+        """Install all frontend snaps."""
         # install secondary frontends
         for frontend in self.frontends[1:]:
             self.install_frontend_snap(frontend)
@@ -130,6 +127,7 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
         self.device.run(["sudo", "snap", "set", frontend.name, "slave=enabled"])
 
     def perform_connections(self):
+        """Automatically connect snap interfaces for the installed Checkbox snaps."""
         snap_connection_data = self.device.interfaces[SnapdAPIClient].get(
             "connections", params={"select": "all"}
         )

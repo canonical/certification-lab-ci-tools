@@ -1,3 +1,5 @@
+"""Helper for determining the appropriate Checkbox runtime snap."""
+
 from dataclasses import replace
 import re
 
@@ -8,11 +10,14 @@ from toolbox.entities.snaps import SnapSpecifier
 
 
 class CheckboxRuntimeHelper:
+    """Helper for determining which Checkbox runtime snap to use based on snap base."""
+
     def __init__(self, device: Device, snapstore: SnapstoreClient):
         self.device = device
         self.info = SnapstoreInfo(snapstore)
 
     def get_base(self, snap: SnapSpecifier, arch: str, store: str) -> str | None:
+        """Get the base snap for a given snap from the snap store."""
         response = self.info.get_refresh_info(
             snap_specifiers=[snap],
             architecture=arch,
@@ -33,6 +38,7 @@ class CheckboxRuntimeHelper:
 
     @staticmethod
     def determine_checkbox_runtime_name(base: str | None) -> str:
+        """Determine Checkbox runtime name from base snap (e.g., 'core22' -> 'checkbox22')."""
         if not base or base == "core":
             return "checkbox16"
         else:
@@ -44,6 +50,7 @@ class CheckboxRuntimeHelper:
     def determine_checkbox_runtime(
         self, snap: SnapSpecifier, arch: str, store: str
     ) -> SnapSpecifier:
+        """Determine the appropriate Checkbox runtime snap for a given Checkbox snap."""
         base = self.get_base(snap, arch, store)
         return SnapSpecifier(
             name=self.determine_checkbox_runtime_name(base),

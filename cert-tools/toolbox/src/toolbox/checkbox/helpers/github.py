@@ -1,3 +1,5 @@
+"""Helper for working with Checkbox versions from the GitHub repository."""
+
 from typing import Iterable
 
 from github import Github
@@ -5,15 +7,19 @@ from packaging.version import Version
 
 
 class CheckboxVersionHelper:
+    """Helper for resolving Checkbox versions to specific GitHub commits."""
+
     def __init__(self):
         self.repo = Github().get_repo("canonical/checkbox")
 
     @staticmethod
     def get_release_and_offset(version: str) -> tuple[str, int]:
+        """Extract release version and dev offset from a version string."""
         version = Version(version)
         return Version(".".join(map(str, version.release))), version.dev or 0
 
     def get_tags(self) -> Iterable[str]:
+        """Get all version tags from the repository, sorted newest first."""
         return sorted(
             (
                 Version(tag.name)
@@ -25,9 +31,11 @@ class CheckboxVersionHelper:
 
     @staticmethod
     def get_previous_tag(tags: Iterable[str], version: Version):
+        """Find the most recent tag before the given version."""
         return next((tag for tag in tags if tag < version), None)
 
     def get_commit_for_version(self, version: str):
+        """Resolve a Checkbox version to its corresponding commit SHA."""
         release, offset = self.get_release_and_offset(version)
         tags = self.get_tags()
         previous = self.get_previous_tag(tags, release)
