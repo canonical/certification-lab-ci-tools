@@ -29,7 +29,7 @@ class SystemStatusInterface(DeviceInterface):
         status = result.stdout.strip()
         if not status:
             logger.info("No status retrieved from %s", self.device.host)
-            return BooleanResult(bool(result))
+            return BooleanResult(False)
         allowed = {"running"}.union(allowed or set())
         logger.info(
             "Checking status of %s: %s (allowed: %s)",

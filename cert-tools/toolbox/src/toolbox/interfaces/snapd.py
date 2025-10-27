@@ -51,7 +51,7 @@ class SnapdAPIClient(DeviceInterface):
         header_lines = [line.strip() for line in re.split(r"\n|\r\n", raw_header)]
         status = header_lines[0].split(maxsplit=2)
         header = {"status": {"status-code": status[1]}}
-        if status[2]:
+        with suppress(IndexError):
             header["status"]["reason"] = status[2]
         for header_line in header_lines[1:]:
             with suppress(ValueError):
@@ -133,7 +133,7 @@ class SnapdAPIClient(DeviceInterface):
             except KeyError:
                 reason_message = ""
             raise SnapdAPIError(
-                f"Response {status['code']}{reason_message} to request {url}"
+                f"Response {status['status-code']}{reason_message} to request {url}"
             )
         content_type = header.get("Content-Type")
         if content_type == "application/json":

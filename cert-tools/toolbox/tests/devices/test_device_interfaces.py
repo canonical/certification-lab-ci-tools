@@ -2,20 +2,9 @@
 
 import pytest
 
-from toolbox.devices import Device
 from toolbox.interfaces import DeviceInterface, DeviceInterfaceError
 
-
-# Minimal Device subclass for testing
-class TrivialDevice(Device):
-    """Trivial device class for testing initialization."""
-
-    def __init__(self, interfaces=None):
-        super().__init__("trivial-host", interfaces=interfaces)
-
-    def run(self, command):
-        """Minimal run implementation."""
-        return f"executed: {command}"
+from tests.devices.trivial import TrivialDevice
 
 
 # Test interfaces
@@ -45,7 +34,7 @@ class TestDeviceInitialization:
         device = TrivialDevice()
         assert device is not None
         assert list(device.interfaces) == []
-        assert str(device) == "TrivialDevice('trivial-host')"
+        assert str(device) == "TrivialDevice('test-host')"
 
     def test_device_with_single_interface(self):
         """Test creating a device with a single interface."""
@@ -83,3 +72,12 @@ class TestDeviceInitialization:
             DeviceInterfaceError, match="Missing required interfaces: InterfaceA"
         ):
             TrivialDevice(interfaces=[interface_c])
+
+    def test_interface_requires_device_attachment(self):
+        """Test that accessing device on unattached interface raises an error."""
+        interface = InterfaceA()
+
+        with pytest.raises(
+            DeviceInterfaceError, match="'InterfaceA' is not attached to a device"
+        ):
+            interface.device
