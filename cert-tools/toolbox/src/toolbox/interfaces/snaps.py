@@ -106,7 +106,7 @@ class SnapInterface(
         options: list[str] | None = None,
         refresh_ok: bool = False,
         policy: RetryPolicy | None = None,
-    ) -> bool:
+    ) -> None:
         """Install or refresh a snap package.
 
         The action is always performed asynchronously (i.e. with the
@@ -131,7 +131,7 @@ class SnapInterface(
             raise error_cls(f"Failed to run '{command}': {install_result.stderr}")
         snap_change_id = install_result.stdout.strip()
         if not snap_change_id:
-            return True
+            return
         wait_result = self.wait_for_snap_changes(policy=policy)
         snap_change = self.get_change(snap_change_id)
         if not wait_result:
