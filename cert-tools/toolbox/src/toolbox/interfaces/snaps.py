@@ -42,7 +42,7 @@ class SnapInterface(
     def get_changes(self) -> dict:
         """Get all snap changes from the device."""
         return self.device.interfaces[SnapdAPIClient].get(
-            endpoint="changes", params={"select": "all"}
+            endpoint="changes", params={"select": "all"}, timeout=30
         )
 
     def get_change(self, id: str) -> dict:

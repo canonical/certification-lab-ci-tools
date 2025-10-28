@@ -47,11 +47,11 @@ class TestRequests:
         [
             (
                 "GET /v2/snaps",
-                "GET /v2/snaps HTTP/1.1\nHost: snapd.socket\nConnection: close\n\n",
+                "GET /v2/snaps HTTP/1.1\r\nHost: snapd.socket\r\nConnection: close\r\n\r\n",
             ),
             (
                 "GET /v2/connections?select=all",
-                "GET /v2/connections?select=all HTTP/1.1\nHost: snapd.socket\nConnection: close\n\n",
+                "GET /v2/connections?select=all HTTP/1.1\r\nHost: snapd.socket\r\nConnection: close\r\n\r\n",
             ),
         ],
     )
@@ -280,7 +280,7 @@ class TestGet:
         assert result == {"snap": "checkbox"}
         device.run.assert_called_once()
         call_args = device.run.call_args
-        assert call_args[0][0] == ["nc", "-U", "/run/snapd.socket"]
+        assert call_args[0][0] == ["nc", "-N", "-U", "/run/snapd.socket"]
 
     def test_get_with_parameters(self, mocker):
         """Test get() with query parameters."""

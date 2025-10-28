@@ -81,7 +81,9 @@ class TestSnapGets:
         result = device.interfaces[SnapInterface].get_changes()
 
         assert result == expected_result
-        mock_get.assert_called_once_with(endpoint="changes", params={"select": "all"})
+        mock_get.assert_called_once_with(
+            endpoint="changes", params={"select": "all"}, timeout=30
+        )
 
     def test_get_change(self, mocker):
         """Test getting a specific change by ID."""
@@ -355,6 +357,7 @@ class TestWaitForSnapChanges:
             device.interfaces[SnapInterface],
             "check_snap_changes_complete_and_reboot",
             return_value=BooleanResult(True),
+            __name__="check_snap_changes_complete_and_reboot",
         )
 
         result = device.interfaces[SnapInterface].wait_for_snap_changes()
@@ -380,6 +383,7 @@ class TestWaitForSnapChanges:
                 BooleanResult(False, "Changes: 1"),
                 BooleanResult(True),
             ],
+            __name__="check_snap_changes_complete_and_reboot",
         )
         policy = Linear(times=3, delay=0)
 
@@ -402,6 +406,7 @@ class TestWaitForSnapChanges:
             device.interfaces[SnapInterface],
             "check_snap_changes_complete_and_reboot",
             return_value=BooleanResult(False, "Changes: 1"),
+            __name__="check_snap_changes_complete_and_reboot",
         )
         policy = Linear(times=2, delay=0)
 
@@ -719,4 +724,4 @@ class TestInstall:
         policy = Linear(times=10, delay=2.0)
 
         device.interfaces[SnapInterface].install("checkbox", policy=policy)
-        mock_wait.assert_called_once_with(policy=policy, status_policy=None)
+        mock_wait.assert_called_once_with(policy=policy)

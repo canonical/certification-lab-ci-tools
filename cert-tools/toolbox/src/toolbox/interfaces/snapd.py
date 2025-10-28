@@ -43,7 +43,7 @@ class SnapdAPIClient(DeviceInterface):
     @staticmethod
     def create_get_request(url: str) -> str:
         """Build the HTTP request string for the given URL."""
-        return f"{url} HTTP/1.1\nHost: snapd.socket\nConnection: close\n\n"
+        return f"{url} HTTP/1.1\r\nHost: snapd.socket\r\nConnection: close\r\n\r\n"
 
     @staticmethod
     def parse_header(raw_header: str) -> dict:
@@ -113,15 +113,18 @@ class SnapdAPIClient(DeviceInterface):
                 f"Unable to parse application/x.ubuntu.assertion content: {body}"
             ) from error
 
-    def get(self, endpoint: str, params: dict = None) -> dict:
+    def get(
+        self, endpoint: str, params: dict | None = None, timeout: int | None = None
+    ) -> dict:
         """Make a GET request to a snapd API endpoint and return the result."""
         url = self.create_get_request_url(endpoint, params)
         request = self.create_get_request(url)
         response = self.device.run(
-            ["nc", "-U", "/run/snapd.socket"],
+            ["nc", "-N", "-U", "/run/snapd.socket"],
             in_stream=StringIO(request),
             echo_stdin=False,
             hide=True,
+            timeout=timeout,
         )
         if not response.stdout:
             raise SnapdAPIError(response.stderr if response.stderr else "No response")
