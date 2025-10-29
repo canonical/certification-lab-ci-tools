@@ -3,6 +3,7 @@
 from invoke import Result
 
 from toolbox.interfaces.debs import DebInterface
+from toolbox.results import BooleanResult
 from toolbox.retries import Linear
 from tests.devices.trivial import TrivialDevice
 
@@ -11,13 +12,15 @@ class TestDebAction:
     """Tests for DebInterface.action() method."""
 
     def test_action_successful(self, mocker):
-        """Test action returns True when command succeeds."""
+        """Test action returns BooleanResult(True) when command succeeds."""
         device = TrivialDevice(interfaces=[DebInterface()])
-        device.run = mocker.Mock(return_value=Result(stdout="", exited=0))
+        device.run = mocker.Mock(return_value=Result(stdout="", stderr="", exited=0))
 
         result = device.interfaces[DebInterface].action("update")
 
-        assert result is True
+        assert isinstance(result, BooleanResult)
+        assert result
+        assert result.message == ""
         expected_command = [
             "sudo",
             "DEBIAN_FRONTEND=noninteractive",
@@ -32,24 +35,29 @@ class TestDebAction:
         device.run.assert_called_once_with(expected_command)
 
     def test_action_fails(self, mocker):
-        """Test action returns False when command fails."""
+        """Test action returns BooleanResult(False) when command fails."""
         device = TrivialDevice(interfaces=[DebInterface()])
-        device.run = mocker.Mock(return_value=Result(stdout="", exited=1))
+        device.run = mocker.Mock(
+            return_value=Result(stdout="", stderr="E: Some error", exited=1)
+        )
 
         result = device.interfaces[DebInterface].action("update")
 
-        assert result is False
+        assert isinstance(result, BooleanResult)
+        assert not result
+        assert result.message == "E: Some error"
 
     def test_action_with_options(self, mocker):
         """Test action includes additional options before the action."""
         device = TrivialDevice(interfaces=[DebInterface()])
-        device.run = mocker.Mock(return_value=Result(stdout="", exited=0))
+        device.run = mocker.Mock(return_value=Result(stdout="", stderr="", exited=0))
 
         result = device.interfaces[DebInterface].action(
             "install", options=["--allow-downgrades"]
         )
 
-        assert result is True
+        assert isinstance(result, BooleanResult)
+        assert result
         expected_command = [
             "sudo",
             "DEBIAN_FRONTEND=noninteractive",
@@ -64,13 +72,14 @@ class TestDebAction:
     def test_action_with_action_options(self, mocker):
         """Test action includes action_options after the action."""
         device = TrivialDevice(interfaces=[DebInterface()])
-        device.run = mocker.Mock(return_value=Result(stdout="", exited=0))
+        device.run = mocker.Mock(return_value=Result(stdout="", stderr="", exited=0))
 
         result = device.interfaces[DebInterface].action(
             "install", action_options=["package1", "package2"]
         )
 
-        assert result is True
+        assert isinstance(result, BooleanResult)
+        assert result
         expected_command = [
             "sudo",
             "DEBIAN_FRONTEND=noninteractive",
@@ -86,7 +95,7 @@ class TestDebAction:
     def test_action_with_both_options(self, mocker):
         """Test action includes both options and action_options."""
         device = TrivialDevice(interfaces=[DebInterface()])
-        device.run = mocker.Mock(return_value=Result(stdout="", exited=0))
+        device.run = mocker.Mock(return_value=Result(stdout="", stderr="", exited=0))
 
         result = device.interfaces[DebInterface].action(
             "install",
@@ -94,7 +103,8 @@ class TestDebAction:
             action_options=["package1", "package2"],
         )
 
-        assert result is True
+        assert isinstance(result, BooleanResult)
+        assert result
         expected_command = [
             "sudo",
             "DEBIAN_FRONTEND=noninteractive",
@@ -115,33 +125,36 @@ class TestDebPackageOperations:
     def test_update(self, mocker):
         """Test update calls action with 'update'."""
         device = TrivialDevice(interfaces=[DebInterface()])
-        device.run = mocker.Mock(return_value=Result(stdout="", exited=0))
+        device.run = mocker.Mock(return_value=Result(stdout="", stderr="", exited=0))
 
         result = device.interfaces[DebInterface].update()
 
-        assert result is True
+        assert isinstance(result, BooleanResult)
+        assert result
         call_args = device.run.call_args[0][0]
         assert call_args[-1] == "update"
 
     def test_upgrade(self, mocker):
         """Test upgrade calls action with 'dist-upgrade'."""
         device = TrivialDevice(interfaces=[DebInterface()])
-        device.run = mocker.Mock(return_value=Result(stdout="", exited=0))
+        device.run = mocker.Mock(return_value=Result(stdout="", stderr="", exited=0))
 
         result = device.interfaces[DebInterface].upgrade()
 
-        assert result is True
+        assert isinstance(result, BooleanResult)
+        assert result
         call_args = device.run.call_args[0][0]
         assert call_args[-1] == "dist-upgrade"
 
     def test_upgrade_with_options(self, mocker):
         """Test upgrade with additional options."""
         device = TrivialDevice(interfaces=[DebInterface()])
-        device.run = mocker.Mock(return_value=Result(stdout="", exited=0))
+        device.run = mocker.Mock(return_value=Result(stdout="", stderr="", exited=0))
 
         result = device.interfaces[DebInterface].upgrade(options=["--allow-downgrades"])
 
-        assert result is True
+        assert isinstance(result, BooleanResult)
+        assert result
         call_args = device.run.call_args[0][0]
         assert "--allow-downgrades" in call_args
         assert call_args[-1] == "dist-upgrade"
@@ -149,27 +162,63 @@ class TestDebPackageOperations:
     def test_install(self, mocker):
         """Test install calls action with package names."""
         device = TrivialDevice(interfaces=[DebInterface()])
-        device.run = mocker.Mock(return_value=Result(stdout="", exited=0))
+        device.run = mocker.Mock(return_value=Result(stdout="", stderr="", exited=0))
 
         result = device.interfaces[DebInterface].install(["package1", "package2"])
 
-        assert result is True
+        assert isinstance(result, BooleanResult)
+        assert result
         call_args = device.run.call_args[0][0]
         assert call_args[-3:] == ["install", "package1", "package2"]
 
     def test_install_with_options(self, mocker):
         """Test install with additional options."""
         device = TrivialDevice(interfaces=[DebInterface()])
-        device.run = mocker.Mock(return_value=Result(stdout="", exited=0))
+        device.run = mocker.Mock(return_value=Result(stdout="", stderr="", exited=0))
 
         result = device.interfaces[DebInterface].install(
             ["package1"], options=["--no-install-recommends"]
         )
 
-        assert result is True
+        assert isinstance(result, BooleanResult)
+        assert result
         call_args = device.run.call_args[0][0]
         assert "--no-install-recommends" in call_args
         assert call_args[-2:] == ["install", "package1"]
+
+    def test_add_repository(self, mocker):
+        """Test add_repository calls add-apt-repository with the repository."""
+        device = TrivialDevice(interfaces=[DebInterface()])
+        device.run = mocker.Mock(return_value=Result(stdout="", stderr="", exited=0))
+
+        result = device.interfaces[DebInterface].add_repository("ppa:deadsnakes/ppa")
+
+        assert isinstance(result, BooleanResult)
+        assert result
+        assert result.message == ""
+        device.run.assert_called_once_with(
+            [
+                "sudo",
+                "DEBIAN_FRONTEND=noninteractive",
+                "add-apt-repository",
+                "-y",
+                "ppa:deadsnakes/ppa",
+            ],
+            hide=True,
+        )
+
+    def test_add_repository_with_error(self, mocker):
+        """Test add_repository returns BooleanResult(False) on error."""
+        device = TrivialDevice(interfaces=[DebInterface()])
+        device.run = mocker.Mock(
+            return_value=Result(stdout="", stderr="E: Repository error", exited=1)
+        )
+
+        result = device.interfaces[DebInterface].add_repository("ppa:invalid/ppa")
+
+        assert isinstance(result, BooleanResult)
+        assert not result
+        assert result.message == "E: Repository error"
 
 
 class TestDebCompletionChecks:

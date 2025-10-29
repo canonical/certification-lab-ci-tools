@@ -5,6 +5,7 @@ from typing import Iterable
 
 from invoke import Result
 
+from toolbox.results import BooleanResult
 from toolbox.interfaces import DeviceInterface
 from toolbox.retries import retry, RetryPolicy
 
@@ -34,7 +35,7 @@ class DebInterface(DeviceInterface):
         action: str,
         options: Iterable[str] | None = None,
         action_options: Iterable[str] | None = None,
-    ) -> bool:
+    ) -> BooleanResult:
         """Execute an apt-get action with the options provided."""
         command = (
             ["sudo", "DEBIAN_FRONTEND=noninteractive", "apt-get", "-qqy"]
@@ -43,26 +44,37 @@ class DebInterface(DeviceInterface):
             + [action]
             + (action_options or [])
         )
-        logger.debug(command)
         result = self.device.run(command)
-        return result.exited == 0
+        return BooleanResult(bool(result), message=result.stderr)
 
-    def update(self) -> bool:
+    def update(self) -> BooleanResult:
         """Run apt-get update."""
         logger.info("Updating")
         return self.action("update")
 
-    def upgrade(self, options: Iterable[str] | None = None) -> bool:
+    def upgrade(self, options: Iterable[str] | None = None) -> BooleanResult:
         """Run apt-get dist-upgrade."""
         logger.info("Upgrading")
         return self.action("dist-upgrade", options=options)
 
     def install(
         self, packages: Iterable[str], options: Iterable[str] | None = None
-    ) -> bool:
+    ) -> BooleanResult:
         """Install Debian packages via apt-get."""
         logger.info("Installing packages: %s", ", ".join(packages))
         return self.action("install", options=options, action_options=packages)
+
+    def add_repository(self, repository: str) -> BooleanResult:
+        """Run add-apt-repository."""
+        logger.info("Adding repository: %s", repository)
+        command = [
+            "sudo",
+            "DEBIAN_FRONTEND=noninteractive",
+            "add-apt-repository",
+            "-y",
+        ] + [repository]
+        result = self.device.run(command, hide=True)
+        return BooleanResult(bool(result), message=result.stderr)
 
     def are_package_processes_ongoing(self) -> Result:
         """Check if apt or dpkg processes are running."""

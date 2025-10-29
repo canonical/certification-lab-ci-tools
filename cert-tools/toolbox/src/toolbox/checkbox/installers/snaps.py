@@ -31,8 +31,7 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
         snapstore: SnapstoreClient,
         predicates: list[Predicate] | None = None,
     ):
-        self.device = device
-        self.agent = agent
+        super().__init__(device=device, agent=agent)
         self.frontends = frontends
         # use store and arch from model or system info to determine runtime
         system = self.device.interfaces[SnapdAPIClient].get("system-info")

@@ -1,21 +1,7 @@
 from dataclasses import dataclass, astuple
-from enum import Enum
 import re
 
-
-class Risk(str, Enum):
-    STABLE = "stable"
-    CANDIDATE = "candidate"
-    BETA = "beta"
-    EDGE = "edge"
-
-    @classmethod
-    def validate(cls, value: str) -> bool:
-        try:
-            Risk(value.lower())
-            return True
-        except ValueError:
-            return False
+from toolbox.entities.risk import Risk
 
 
 @dataclass
