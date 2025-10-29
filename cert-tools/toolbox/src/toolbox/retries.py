@@ -14,7 +14,7 @@ class RetryPolicy(ABC):
     """Abstract base class for retry policies."""
 
     @abstractmethod
-    def waits(self):
+    def waits(self):  # pragma: no cover
         """Generate wait times between retries."""
         raise NotImplementedError
 

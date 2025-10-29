@@ -26,7 +26,9 @@ class Predicate(ABC):
     """Base class for connection selection predicates."""
 
     @abstractmethod
-    def check(self, plug: PlugDict, slot: SlotDict) -> PredicateCheckResult:
+    def check(
+        self, plug: PlugDict, slot: SlotDict
+    ) -> PredicateCheckResult:  # pragma: no cover
         """
         Return a PredicateCheckResult which is True if the plug and slot
         should be connected or False otherwise.

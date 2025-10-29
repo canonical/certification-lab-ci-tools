@@ -28,4 +28,8 @@ wait-for-snap-changes = "toolbox.cli.wait_for_snap_changes:main"
 install-checkbox-snaps = "toolbox.cli.install_checkbox_snaps:main"
 
 [project.optional-dependencies]
-dev = ["pytest", "pytest-mock"]
+dev = ["pytest", "pytest-mock", "pytest-cov"]
+
+[tool.coverage.report]
+skip_covered = false
+skip_empty = false

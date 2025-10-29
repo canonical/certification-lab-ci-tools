@@ -63,6 +63,10 @@ class TestSnapSpecifierFromString:
                 "Cannot parse 'checkbox=stable=extra' as a snap specifier",
             ),
             ("", "Cannot parse '' as a snap specifier"),
+            (
+                "checkbox=invalid/track/risk/branch/extra",
+                "Cannot parse 'checkbox=invalid/track/risk/branch/extra' as a snap specifier",
+            ),
         ],
     )
     def test_snap_specifier_from_string_invalid(self, invalid_string, error_pattern):

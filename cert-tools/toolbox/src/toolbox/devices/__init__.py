@@ -50,7 +50,7 @@ class Device(ABC):
         return shlex.join(command)
 
     @abstractmethod
-    def run(self, command: CommandType, **kwargs) -> Result:
+    def run(self, command: CommandType, **kwargs) -> Result:  # pragma: no cover
         """Execute a command on the device."""
         raise NotImplementedError
 

@@ -24,7 +24,7 @@ class CheckboxInstaller(ABC):
 
     @property
     @abstractmethod
-    def checkbox_cli(self, *args, **kwargs) -> str:
+    def checkbox_cli(self, *args, **kwargs) -> str:  # pragma: no cover
         """Return the command to invoke the Checkbox CLI on the device."""
         raise NotImplementedError
 
@@ -64,7 +64,7 @@ class CheckboxInstaller(ABC):
         )
 
     @abstractmethod
-    def install_on_device(self, *args, **kwargs):
+    def install_on_device(self, *args, **kwargs):  # pragma: no cover
         """Install Checkbox on the device."""
         raise NotImplementedError
 

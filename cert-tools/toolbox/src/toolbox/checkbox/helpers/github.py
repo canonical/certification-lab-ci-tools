@@ -13,12 +13,12 @@ class CheckboxVersionHelper:
         self.repo = Github().get_repo("canonical/checkbox")
 
     @staticmethod
-    def get_release_and_offset(version: str) -> tuple[str, int]:
+    def get_release_and_offset(version: str) -> tuple[Version, int]:
         """Extract release version and dev offset from a version string."""
         version = Version(version)
         return Version(".".join(map(str, version.release))), version.dev or 0
 
-    def get_tags(self) -> Iterable[str]:
+    def get_tags(self) -> Iterable[Version]:
         """Get all version tags from the repository, sorted newest first."""
         return sorted(
             (
@@ -30,7 +30,7 @@ class CheckboxVersionHelper:
         )
 
     @staticmethod
-    def get_previous_tag(tags: Iterable[str], version: Version):
+    def get_previous_tag(tags: Iterable[str], version: Version) -> Version | None:
         """Find the most recent tag before the given version."""
         return next((tag for tag in tags if tag < version), None)
 

@@ -29,13 +29,19 @@ class DebInterface(DeviceInterface):
         "/var/cache/debconf/config.dat",
     ]
 
-    def action(self, action: str, options: Iterable[str] | None = None) -> bool:
+    def action(
+        self,
+        action: str,
+        options: Iterable[str] | None = None,
+        action_options: Iterable[str] | None = None,
+    ) -> bool:
         """Execute an apt-get action with the options provided."""
         command = (
             ["sudo", "DEBIAN_FRONTEND=noninteractive", "apt-get", "-qqy"]
             + self.options
             + (options or [])
             + [action]
+            + (action_options or [])
         )
         logger.debug(command)
         result = self.device.run(command)
@@ -49,14 +55,14 @@ class DebInterface(DeviceInterface):
     def upgrade(self, options: Iterable[str] | None = None) -> bool:
         """Run apt-get dist-upgrade."""
         logger.info("Upgrading")
-        return self.action("dist-upgrade", options)
+        return self.action("dist-upgrade", options=options)
 
     def install(
         self, packages: Iterable[str], options: Iterable[str] | None = None
     ) -> bool:
         """Install Debian packages via apt-get."""
         logger.info("Installing packages: %s", ", ".join(packages))
-        return self.action("install", packages + (options or []))
+        return self.action("install", options=options, action_options=packages)
 
     def are_package_processes_ongoing(self) -> Result:
         """Check if apt or dpkg processes are running."""
