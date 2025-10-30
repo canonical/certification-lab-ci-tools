@@ -21,7 +21,6 @@ dependencies = [
 #    "snapstore @ file:../snapstore"
 ]
 [project.scripts]
-# run = "toolbox.cli.run:main"
 wait-for-ssh = "toolbox.cli.wait_for_ssh:main"
 wait-for-packages-complete = "toolbox.cli.wait_for_packages_complete:main"
 wait-for-snap-changes = "toolbox.cli.wait_for_snap_changes:main"
