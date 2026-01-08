@@ -25,7 +25,7 @@ sudo dmesg -C
 sudo journalctl --rotate && sudo journalctl --vacuum-time=1s
 
 # clean-up snapd cache, to free up space before installing new snaps
-sudo rm -f /var/lib/snapd/cache/*
+sudo rm -f /var/lib/snapd/cache
 
 # delete all checkbox snaps, this includes any frontend or custom frontend
 # (they all contain checkbox in their name). This should also purge any
