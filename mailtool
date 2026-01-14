@@ -67,7 +67,29 @@ def main():
     msg['From'] = MAIL_FROM + '@canonical.com'
     msg['To'] = args.to
 
-    s = smtplib.SMTP(SMTPSERVER)
+    max_retries = 3
+    for attempt in range(max_retries):
+        current_timeout *= 2
+
+        try:
+            print(f"Attempt {attempt + 1}: Connecting with {current_timeout}s timeout...")
+
+            s = smtplib.SMTP(SMTPSERVER)
+
+            print("Succesfully connected to the SMTP server.")
+        except (socket.timeout, TimeoutError):
+            print(f"  Result: Connection timed out after {current_timeout} seconds.")
+        except Exception as e:
+            print(f"  Result: An unexpected error occurred: {e}")
+
+        if attempt < max_retries - 1:
+            wait_time = 5 * (attempt + 1)
+            print(f"  Waiting {wait_time}s before next retry...")
+            time.sleep(wait_time)
+        else:
+            print("All retry attempts failed.")
+            return False
+
     if SMTPUSER:
         # Only login if we have credentials in the env
         s.ehlo()
