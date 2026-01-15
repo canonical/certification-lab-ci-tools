@@ -74,7 +74,7 @@ def main():
         try:
             print(f"Attempt {attempt + 1}: Connecting with {current_timeout}s timeout...")
 
-            s = smtplib.SMTP(SMTPSERVER)
+            s = smtplib.SMTP(SMTPSERVER, timeout=current_timeout)
 
             print("Succesfully connected to the SMTP server.")
         except (socket.timeout, TimeoutError):
