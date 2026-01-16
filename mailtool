@@ -6,6 +6,7 @@ import argparse
 import os
 import smtplib
 import socket
+import sys
 import time
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
@@ -106,6 +107,9 @@ def main():
             s.login(SMTPUSER, SMTPPASSWORD)
         s.send_message(msg)
         s.quit()
+    else:
+        print("Error: Couldn't create an SMTP connection.")
+        sys.exit(1)
 
 
 if __name__ == '__main__':
