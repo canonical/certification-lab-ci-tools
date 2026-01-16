@@ -149,3 +149,49 @@ class TestSMTPConnection:
         assert mock_smtp.call_args_list[0][1]["timeout"] == 10
         assert mock_smtp.call_args_list[1][1]["timeout"] == 20
         assert mock_smtp.call_args_list[2][1]["timeout"] == 40
+
+    @patch("smtplib.SMTP")
+    def test_timeout_max(self, mock_smtp):
+        """
+        Verifies that timeout value is maximum 1730s (should be <1800s).
+        """
+        mock_smtp.side_effect = TimeoutError
+
+        result = mailtool.smtp_connect_with_retries(
+            retries=6, base_timeout_secs=300, wait_time_secs=0.1
+        )
+
+        # All attemps should fail so result is None and the function should be
+        # called 6 times
+        assert result is None
+        assert mock_smtp.call_count == 6
+
+        # Check the timeout values for the function calls
+        assert mock_smtp.call_args_list[0][1]["timeout"] == 300
+        assert mock_smtp.call_args_list[1][1]["timeout"] == 600
+        assert mock_smtp.call_args_list[2][1]["timeout"] == 1200
+        assert mock_smtp.call_args_list[3][1]["timeout"] == 1730
+        assert mock_smtp.call_args_list[4][1]["timeout"] == 1730
+        assert mock_smtp.call_args_list[5][1]["timeout"] == 1730
+
+    @patch("smtplib.SMTP")
+    def test_timeout_max_arg(self, mock_smtp):
+        """
+        Verifies that timeout value is maximum 1730s (should be <1800s) even
+        when passed directly as an argument.
+        """
+        mock_smtp.side_effect = TimeoutError
+
+        result = mailtool.smtp_connect_with_retries(
+            retries=3, base_timeout_secs=2000, wait_time_secs=0.1
+        )
+
+        # All attemps should fail so result is None and the function should be
+        # called 3 times
+        assert result is None
+        assert mock_smtp.call_count == 3
+
+        # Check the timeout values for the function calls
+        assert mock_smtp.call_args_list[0][1]["timeout"] == 1730
+        assert mock_smtp.call_args_list[1][1]["timeout"] == 1730
+        assert mock_smtp.call_args_list[2][1]["timeout"] == 1730

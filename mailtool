@@ -47,6 +47,9 @@ def smtp_connect_with_retries(
             print(
                 f"Attempt {attempt}: Connecting with {current_timeout}s timeout..."
             )
+            # The timeout shouldn't be larger than 1800s, because after 1800s
+            # of no output, the job would fail. Here capped at 1730s, just to be sure.
+            current_timeout = min(current_timeout, 1730)
             s = smtplib.SMTP(SMTPSERVER, timeout=current_timeout)
             print(f"-> Succesfully connected to the SMTP server.")
             return s
