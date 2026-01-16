@@ -5,6 +5,9 @@
 import argparse
 import os
 import smtplib
+import socket
+import sys
+import time
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -33,6 +36,37 @@ def get_args():
     parser.add_argument('messagefile',
                         help='File containing the message to send')
     return parser.parse_args()
+
+
+def smtp_connect_with_retries(
+    retries=3, base_timeout_secs=300, wait_time_secs=30
+):
+    current_timeout = base_timeout_secs
+    for attempt in range(1, retries + 1):
+        try:
+            print(
+                f"Attempt {attempt}: Connecting with {current_timeout}s timeout..."
+            )
+            # The timeout shouldn't be larger than 1800s, because after 1800s
+            # of no output, the job would fail. Here capped at 1730s, just to be sure.
+            current_timeout = min(current_timeout, 1730)
+            s = smtplib.SMTP(SMTPSERVER, timeout=current_timeout)
+            print(f"-> Succesfully connected to the SMTP server.")
+            return s
+
+        except (socket.timeout, TimeoutError):
+            print(f"-> Connection timed out after {current_timeout} seconds.")
+
+        except Exception as e:
+            print(f"-> Unexpected error occurred: {e}")
+
+        if attempt < retries:
+            print(f"Waiting {wait_time_secs}s before next retry...\n")
+            current_timeout *= 2
+            time.sleep(wait_time_secs)
+
+    print("All retry attempts failed.")
+    return None
 
 
 def main():
@@ -67,14 +101,18 @@ def main():
     msg['From'] = MAIL_FROM + '@canonical.com'
     msg['To'] = args.to
 
-    s = smtplib.SMTP(SMTPSERVER)
-    if SMTPUSER:
-        # Only login if we have credentials in the env
-        s.ehlo()
-        s.starttls()
-        s.login(SMTPUSER, SMTPPASSWORD)
-    s.send_message(msg)
-    s.quit()
+    s = smtp_connect_with_retries()
+    if s is not None:
+        if SMTPUSER:
+            # Only login if we have credentials in the env
+            s.ehlo()
+            s.starttls()
+            s.login(SMTPUSER, SMTPPASSWORD)
+        s.send_message(msg)
+        s.quit()
+    else:
+        print("Error: Couldn't create an SMTP connection.")
+        sys.exit(1)
 
 
 if __name__ == '__main__':
