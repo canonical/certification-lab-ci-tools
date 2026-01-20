@@ -7,8 +7,9 @@ Utility scripts and tools authored by the Certification Team to enhance and auto
 Certification tasks that need to make use of the tools in this repo can use the downloadable installer:
 
 ```bash
-curl -Ls -o install_tools.sh https://raw.githubusercontent.com/canonical/hwcert-jenkins-tools/main/install_tools.sh
-source install_tools.sh tools --branch LM-1580-sru-refactor
+export TOOLS_PATH=tools
+curl -Ls -o install_tools.sh https://raw.githubusercontent.com/canonical/certification-lab-ci-tools/refs/heads/main/install_tools.sh
+source install_tools.sh $TOOLS_PATH
 ```
 
 The installer clones this repo in a readable, consistent manner.
