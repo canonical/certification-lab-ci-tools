@@ -20,12 +20,17 @@ import logging
 import os
 import re
 import subprocess
+import tempfile
 import textwrap
-from typing import List
+from typing import List, Optional
 from urllib.parse import urlparse
 
 logging.basicConfig(level=logging.INFO)
 logging.getLogger().name = os.path.basename(__file__)
+
+# version of Ubuntu where no longer using apt-key
+UBUNTU_RELEASE = 25
+DEFAULT_KEYRING_DIR = "/etc/apt/keyrings"
 
 
 def neatly_run_command(cmd: List[str]) -> str:
@@ -59,6 +64,21 @@ def guess_ubuntu_codename() -> str:
     ).strip()
     logging.info("Ubuntu codename guessed: %s", codename)
     return codename
+
+
+def guess_ubuntu_release() -> int:
+    """
+    Guess the Ubuntu release.
+
+    The release is guessed by running the lsb_release command.
+    """
+    logging.info("Guessing Ubuntu release...")
+    release = neatly_run_command(
+        ["lsb_release", "--release", "--short"]
+    ).strip()
+    logging.info("Ubuntu release guessed: %s", release)
+    # Only returning the major release number
+    return int(release.split(".")[0])
 
 
 def slugify(string: str) -> str:
@@ -155,7 +175,7 @@ def parse_ppa_url(url: str) -> str:
     return host, path[1:]
 
 
-def add_ppa_to_sources_list(ppa: str) -> None:
+def add_ppa_to_sources_list(ppa: str, keyring_file: Optional[str]) -> None:
     """
     Add the PPA to the sources.list file.
 
@@ -166,12 +186,21 @@ def add_ppa_to_sources_list(ppa: str) -> None:
     ppa_name = slugify(ppa_path)
     sources_list_file = "/etc/apt/sources.list.d/{}.list".format(ppa_name)
     release_codename = guess_ubuntu_codename()
-    contents = textwrap.dedent(
-        """
-        deb {ppa} {release_codename} main
-        deb-src {ppa} {release_codename} main
-        """
-    ).format(ppa=ppa, release_codename=release_codename)
+    release = guess_ubuntu_release()
+    if release >= UBUNTU_RELEASE and keyring_file:
+        contents = textwrap.dedent(
+            """
+            deb [signed-by={keyring_file}] {ppa} {release_codename} main
+            deb-src [signed-by={keyring_file}] {ppa} {release_codename} main
+            """
+        ).format(keyring_file=keyring_file,ppa=ppa, release_codename=release_codename)
+    else:
+        contents = textwrap.dedent(
+            """
+            deb {ppa} {release_codename} main
+            deb-src {ppa} {release_codename} main
+            """
+        ).format(ppa=ppa, release_codename=release_codename)
 
     if os.path.exists(sources_list_file):
         logging.warning(
@@ -184,22 +213,60 @@ def add_ppa_to_sources_list(ppa: str) -> None:
         logging.info("Created sources list file: %s", sources_list_file)
 
 
-def add_ppa_key(key: str) -> None:
+def add_ppa_key(key: str) -> Optional[str]:
     """
     Add the PPA's key to the system.
 
-    The PPA's key will be added to the system by running the apt-key command.
+    Depending on the Ubuntu release, either apt-key or gpg will be used.
     """
+    # Get the major release number
+    release = guess_ubuntu_release()
+    # Start using gpg directly starting from Ubuntu 25
+    if release >= UBUNTU_RELEASE:
+        logging.info("Using gpg to add the PPA key as apt-key is deprecated.")
+        return add_ppa_key_gpg(key)
+    else:
+        cmd = [
+            "apt-key",
+            "adv",
+            "--keyserver",
+            "keyserver.ubuntu.com",
+            "--recv-keys",
+            key,
+        ]
+        neatly_run_command(cmd)
 
-    cmd = [
-        "apt-key",
-        "adv",
-        "--keyserver",
-        "keyserver.ubuntu.com",
-        "--recv-keys",
-        key,
-    ]
-    neatly_run_command(cmd)
+
+def add_ppa_key_gpg(key: str) -> str:
+    """Add the PPA's key to the system using gpg directly."""
+    # Create the keyring directory if it doesn't exist
+    os.makedirs(DEFAULT_KEYRING_DIR, exist_ok=True)
+
+    keyring_file = os.path.join(DEFAULT_KEYRING_DIR, "{}.gpg".format(key))
+    keyserver_url = (
+        "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x{}"
+    ).format(key)
+
+    # Use a temporary directory for downloading the armored key
+    with tempfile.TemporaryDirectory() as tmpdir:
+        armored_key = os.path.join(tmpdir, "key.asc")
+
+        # Download the armored key
+        cmd_fetch = ["wget", "-q", "-O", armored_key, keyserver_url]
+        neatly_run_command(cmd_fetch)
+
+        # Import the key into the keyring
+        cmd_dearmor = [
+            "gpg",
+            "--dearmor",
+            "--output",
+            keyring_file,
+            armored_key,
+        ]
+        neatly_run_command(cmd_dearmor)
+
+    logging.info("Added PPA key to keyring: %s", keyring_file)
+    return keyring_file
 
 
 def main() -> None:
@@ -213,8 +280,8 @@ def main() -> None:
     parser.add_argument("key", help="PPA's key to add.")
     args = parser.parse_args()
     create_apt_auth_file(args.ppa, args.login, args.password)
-    add_ppa_key(args.key)
-    add_ppa_to_sources_list(args.ppa)
+    keyring_file = add_ppa_key(args.key)
+    add_ppa_to_sources_list(args.ppa, keyring_file)
 
 
 if __name__ == "__main__":
