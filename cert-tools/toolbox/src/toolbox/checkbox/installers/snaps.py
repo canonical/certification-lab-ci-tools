@@ -41,10 +41,12 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
         self.runtime = runtime_helper.determine_checkbox_runtime(
             snap=frontends[0], arch=system["architecture"], store=self.store
         )
+        selected_snaps = [frontend.name for frontend in self.frontends] + [
+            self.runtime.name
+        ]
         self.connector = SnapConnector(
             predicates=(
-                [SelectSnaps(frontend.name for frontend in self.frontends)]
-                + (predicates if predicates else [])
+                [SelectSnaps(selected_snaps)] + (predicates if predicates else [])
             )
         )
 
@@ -103,6 +105,61 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
             strict = False
         return strict
 
+    def has_new_providers_interface(self, snap_name: str) -> bool:
+        """Check if the snap has the new providers interface (custom-frontend slot)."""
+        snap_connection_data = self.device.interfaces[SnapdAPIClient].get(
+            "connections", params={"select": "all"}
+        )
+        for slot in snap_connection_data.get("slots", []):
+            if (
+                slot["snap"] == snap_name
+                and slot["interface"] == "content"
+                and slot.get("attrs", {}).get("content") == "custom-frontend"
+            ):
+                return True
+        return False
+
+    def start_service(self, frontend: SnapSpecifier):
+        """Start agent (frontend) or runner (runtime) service for new providers interface.
+
+        With the new providers interface:
+        - Agent service runs on the frontend snap
+        - Runner service runs on the runtime snap (fallback)
+        """
+        logger.info("Starting service for new providers interface")
+        # Try agent service on frontend first
+        result = self.device.run(
+            ["sudo", "snap", "start", f"{frontend.name}.agent"],
+            hide=True,
+        )
+        if result and result.exited == 0:
+            logger.info("Started agent service on frontend %s", frontend.name)
+            return
+        # Fall back to runner service on runtime
+        logger.info(
+            "agent not available on %s, trying runner on %s",
+            frontend.name,
+            self.runtime.name,
+        )
+        result = self.device.run(
+            ["sudo", "snap", "start", f"{self.runtime.name}.runner"],
+            hide=True,
+        )
+        if result and result.exited == 0:
+            logger.info("Started runner service on runtime %s", self.runtime.name)
+            return
+        logger.warning(
+            "Neither agent on %s nor runner on %s could be started",
+            frontend.name,
+            self.runtime.name,
+        )
+
+    def configure_legacy_frontend(self, frontend: SnapSpecifier):
+        """Configure frontend using legacy agent/slave settings."""
+        logger.info("Configuring legacy frontend: %s", frontend.name)
+        self.device.run(["sudo", "snap", "set", frontend.name, "agent=enabled"])
+        self.device.run(["sudo", "snap", "set", frontend.name, "slave=enabled"])
+
     def install_runtime(self):
         """Install the appropriate Checkbox runtime snap for the frontend."""
         logger.info(
@@ -111,7 +168,10 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
             self.runtime.channel,
         )
         self.device.interfaces[SnapInterface].install(
-            self.runtime.name, self.runtime.channel, policy=Linear(times=30, delay=10)
+            self.runtime.name,
+            self.runtime.channel,
+            options=["--devmode"],
+            policy=Linear(times=30, delay=10),
         )
 
     def install_frontends(self):
@@ -123,8 +183,7 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
         # install primary frontend
         frontend = self.frontends[0]
         self.install_frontend_snap(frontend)
-        self.device.run(["sudo", "snap", "set", frontend.name, "agent=enabled"])
-        self.device.run(["sudo", "snap", "set", frontend.name, "slave=enabled"])
+        # Detection and configuration happens in restart() after connections are made
 
     def perform_connections(self):
         """Automatically connect snap interfaces for the installed Checkbox snaps."""
@@ -155,11 +214,18 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
         self.device.interfaces[SnapInterface].install(
             self.runtime.name,
             self.runtime.channel,
+            options=["--devmode"],
             policy=Linear(times=30, delay=10),
         )
         frontend = self.frontends[0]
-        logger.info("Restarting primary frontend snap: %s", frontend.name)
-        self.device.run(["sudo", "snap", "restart", frontend.name])
+        # Detect and use appropriate approach
+        if self.has_new_providers_interface(frontend.name):
+            logger.info("Using new providers interface for %s", frontend.name)
+            self.start_service(frontend)
+        else:
+            logger.info("Using legacy interface for %s", frontend.name)
+            self.configure_legacy_frontend(frontend)
+            self.device.run(["sudo", "snap", "restart", frontend.name])
 
     def install_on_device(self):
         self.install_runtime()
