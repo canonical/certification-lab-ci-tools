@@ -267,7 +267,7 @@ class Connector:
                     if all(results):
                         connections.add(Connection.from_dicts(plug, slot))
                     for message in filter(bool, messages):
-                            logger.info(message)
+                        logger.info(message)
         return connections
 
 
