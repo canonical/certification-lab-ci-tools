@@ -1,0 +1,551 @@
+#!/usr/bin/env bash
+#
+# GENIO Platform Unified Setup Script
+#
+# This script automates the setup for MediaTek Genio platforms (g1200, g700, g510, g350).
+# It supports three image types: Desktop, Server, and UC (Ubuntu Core), automatically
+# executing the appropriate configuration sections based on the image type.
+#
+# Features by Image Type:
+#   Desktop:
+#     - Desktop environment configuration (audio, power, auto-login)
+#     - Classic checkbox packages
+#     - Camera ISP/CAMD packages
+#   Server:
+#     - GPU driver and Ubuntu Frame installation
+#     - Classic checkbox packages
+#     - Camera ISP/CAMD packages
+#     - ALSA utils
+#   UC (Ubuntu Core):
+#     - UC-specific checkbox packages
+#     - Bluez integration
+#     - GPU driver and Ubuntu Frame installation
+#     - Audio group configuration
+#     - Journal logging setup
+#
+# Usage:
+#   1. Make the script executable: chmod +x baoshan_setup
+#   2. Run the script with required options: ./baoshan_setup [options]
+#
+# IMPORTANT: This script will perform system-level changes, including
+# installing packages and modifying user permissions. It will also
+# reboot the system upon completion. Review it carefully before running.
+#
+
+# --- Script Best Practices ---
+# Exit immediately if a command exits with a non-zero status.
+set -e
+# Treat unset variables as an error when substituting.
+set -u
+# Pipes return the exit status of the last command to exit with a non-zero status.
+set -o pipefail
+
+# --- Helper for logging ---
+log_header() {
+    echo ""
+    echo "================================================================================"
+    echo "  $1"
+    echo "================================================================================"
+}
+
+# --- Configuration & Argument Parsing ---
+
+# Initialize variables
+PLATFORM=""
+IMAGE_TYPE=""
+HAS_CAM_ISP=""
+HAS_CAMD=""
+AP1302_AR0830=""
+AP1302_AR0430=""
+SSH_USER=""
+PPA_USER=""
+PPA_PASSWD=""
+PPA_KEY=""
+SKIP_CHECKBOX="false"
+
+usage() {
+    echo "Usage: $0 [options]"
+    echo ""
+    echo "This script sets up a Genio environment (Desktop, Server, or UC)."
+    echo ""
+    echo "Required for all:"
+    echo "  -p, --platform <platform>    Set the platform. Options: g1200, g700, g510, g350."
+    echo "  -t, --image-type <type>      Set the image type. Options: Desktop, Server, UC."
+    echo ""
+    echo "Required for Desktop/Server only:"
+    echo "  -i, --isp <true|false>       Enable/Disable CAM_ISP."
+    echo "  -d, --camd <true|false>      Enable/Disable CAMD."
+    echo "  -a, --AR0830 <true|false>    Enable/Disable AP1302_AR0830 firmware."
+    echo "  -b, --AR0430 <true|false>    Enable/Disable AP1302_AR0430 firmware."
+    echo ""
+    echo "Optional for all:"
+    echo "  -s, --ssh-user <username>    Username for ssh-import-id."
+    echo "  -u, --ppa-user <username>    PPA username (for private Baoshan PPA)."
+    echo "  -w, --ppa-passwd <password>  PPA password (for private Baoshan PPA)."
+    echo "  -k, --ppa-key <key>          PPA GPG key ID (for private Baoshan PPA)."
+    echo "  --skip-checkbox              Skip checkbox-related snap installations."
+    echo "  -h, --help                   Display this help message."
+    echo ""
+    echo "Examples:"
+    echo "  UC:      $0 -p g1200 -t UC -s ce-certification-qa"
+    echo "  Desktop: $0 -p g1200 -t Desktop -i true -d true -a false -b false -s ce-certification-qa --ppa-user myuser --ppa-passwd mypass --ppa-key ABCD1234"
+    echo "  Server:  $0 -p g1200 -t Server -i true -d true -a false -b false -s ce-certification-qa --ppa-user myuser --ppa-passwd mypass --ppa-key ABCD1234"
+    exit 1
+}
+
+# Helper to convert boolean input to correct format (True/False)
+normalize_bool() {
+    if [[ "${1,,}" == "true" ]]; then
+        echo "True"
+    elif [[ "${1,,}" == "false" ]]; then
+        echo "False"
+    else
+        echo "Error: Invalid boolean value '$1'. Please use 'true' or 'false'." >&2
+        exit 1
+    fi
+}
+
+# Parse command-line arguments
+while [[ $# -gt 0 ]]; do
+    key="$1"
+    case ${key} in
+        -p|--platform)
+            PLATFORM="$2"
+            shift 2
+            ;;
+        -t|--image-type)
+            IMAGE_TYPE="$2"
+            shift 2
+            ;;
+        -i|--isp)
+            HAS_CAM_ISP=$(normalize_bool "$2")
+            shift 2
+            ;;
+        -d|--camd)
+            HAS_CAMD=$(normalize_bool "$2")
+            shift 2
+            ;;
+        -a|--AR0830)
+            AP1302_AR0830=$(normalize_bool "$2")
+            shift 2
+            ;;
+        -b|--AR0430)
+            AP1302_AR0430=$(normalize_bool "$2")
+            shift 2
+            ;;
+        -s|--ssh-user)
+            SSH_USER="$2"
+            shift 2
+            ;;
+        -u|--ppa-user)
+            PPA_USER="$2"
+            shift 2
+            ;;
+        -w|--ppa-passwd)
+            PPA_PASSWD="$2"
+            shift 2
+            ;;
+        -k|--ppa-key)
+            PPA_KEY="$2"
+            shift 2
+            ;;
+        --skip-checkbox)
+            SKIP_CHECKBOX="true"
+            shift
+            ;;
+        -h|--help)
+            usage
+            ;;
+        *)    # unknown option
+            echo "Unknown option: $1"
+            usage
+            ;;
+    esac
+done
+
+# --- Validate required arguments ---
+if [ -z "$PLATFORM" ] || [ -z "$IMAGE_TYPE" ]; then
+    echo "Error: Missing required arguments (platform and image-type are mandatory)." >&2
+    echo "" >&2
+    usage
+fi
+
+# --- Validate platform value ---
+case "$PLATFORM" in
+    "g1200"|"g700"|"g510"|"g350")
+        # Platform is valid, do nothing
+        ;;
+    *)
+        echo "Error: Invalid platform '$PLATFORM'. Supported platforms are g1200, g700, g510, g350." >&2
+        echo "" >&2
+        usage
+        ;;
+esac
+
+# --- Validate image type value ---
+case "$IMAGE_TYPE" in
+    "Desktop"|"Server"|"UC")
+        # Image type is valid, do nothing
+        ;;
+    *)
+        echo "Error: Invalid image type '$IMAGE_TYPE'. Supported image types are Desktop, Server, UC." >&2
+        echo "" >&2
+        usage
+        ;;
+esac
+
+# --- Conditional validation for Classic (Desktop/Server) arguments ---
+if [ "$IMAGE_TYPE" != "UC" ]; then
+    if [ -z "$HAS_CAM_ISP" ] || [ -z "$HAS_CAMD" ] || [ -z "$AP1302_AR0830" ] || [ -z "$AP1302_AR0430" ]; then
+        echo "Error: For Desktop/Server image types, camera arguments (isp, camd, AR0830, AR0430) are required." >&2
+        echo "" >&2
+        usage
+    fi
+fi
+
+
+# --- Script Start ---
+log_header "Reading Initial Configuration"
+
+# --- Initialize Target Variables ---
+CAM_ISP_PLATFORM=""
+CAMD_PLATFORM=""
+
+echo "PLATFORM: $PLATFORM"
+echo "IMAGE_TYPE: $IMAGE_TYPE"
+if [ "$IMAGE_TYPE" != "UC" ]; then
+    echo "HAS_CAM_ISP: $HAS_CAM_ISP"
+    echo "HAS_CAMD: $HAS_CAMD"
+    echo "AP1302_AR0830: $AP1302_AR0830"
+    echo "AP1302_AR0430: $AP1302_AR0430"
+fi
+echo "SSH_USER: ${SSH_USER:-Not Set}"
+
+# --- Main Functions ---
+
+determine_platform_configs() {
+    log_header "Determining Platform-Specific Configurations"
+    # Logic for CAM_ISP_PLATFORM
+    if [ "$HAS_CAM_ISP" = "True" ]; then
+        case "$PLATFORM" in
+            "g1200")
+                CAM_ISP_PLATFORM="genio1200"
+                ;;
+            "g700" | "g510")
+                CAM_ISP_PLATFORM="genio510"
+                ;;
+        esac
+    fi
+
+    # Logic for CAMD_PLATFORM
+    if [ "$HAS_CAMD" = "True" ]; then
+        case "$PLATFORM" in
+            "g1200")
+                CAMD_PLATFORM="genio1200"
+                ;;
+            "g700" | "g510")
+                CAMD_PLATFORM="genio700"
+                ;;
+        esac
+    fi
+
+    if [ -n "$CAM_ISP_PLATFORM" ]; then
+        echo "CAM_ISP Platform configured to: $CAM_ISP_PLATFORM"
+    else
+        echo "CAM_ISP is not enabled or not supported on this platform."
+    fi
+
+    if [ -n "$CAMD_PLATFORM" ]; then
+        echo "CAMD Platform configured to: $CAMD_PLATFORM"
+    else
+        echo "CAMD is not enabled or not supported on this platform."
+    fi
+}
+
+setup_user_and_system() {
+    log_header "Setting up User and System"
+    # WARNING: The following commands have security implications.
+    if [ -n "$SSH_USER" ]; then
+        echo "Importing SSH key for user '$SSH_USER'"
+        ssh-import-id "$SSH_USER"
+    else
+        echo "Skipping SSH key import (no --ssh-user specified)."
+    fi
+
+    USER="$(whoami)"
+    # WARNING: This sets your password to your username.
+    # This is insecure and should be changed immediately after setup.
+    echo "Setting password for user '$USER' (WARNING: insecure)"
+    echo "$USER:$USER" | sudo chpasswd
+
+    # WARNING: This grants passwordless sudo to the current user.
+    echo "Granting passwordless sudo to user '$USER'"
+    echo "$USER ALL=(ALL) NOPASSWD:ALL" | sudo tee "/etc/sudoers.d/$USER"
+
+    # Refresh hold: UC uses 51 days, Classic uses 50 days
+    if [ "$IMAGE_TYPE" = "UC" ]; then
+        echo "Holding system refresh for 51 days (UC)"
+        sudo snap set system refresh.hold="$(date --date="+ 51 day" +%Y-%m-%dT%H:%M:%S%:z)"
+    else
+        echo "Holding system refresh for 50 days (Classic)"
+        sudo snap set system refresh.hold="$(date --date="+ 50 day" +%Y-%m-%dT%H:%M:%S%:z)"
+    fi
+}
+
+configure_desktop_settings() {
+    log_header "Configuring Desktop Environment"
+    
+    # Audio mixer settings
+    echo "Configuring audio mixer settings..."
+    amixer set Master unmute || true
+    amixer set Master 100 || true
+    amixer set Speaker 100 || true
+    amixer -c 1 set Master unmute || true
+    amixer -c 1 set Master 100 || true
+    amixer -c 1 set Speaker 100 || true
+    
+    # GNOME desktop power and screensaver settings
+    echo "Configuring GNOME desktop power and screensaver settings..."
+    gsettings set org.gnome.desktop.screensaver ubuntu-lock-on-suspend false
+    gsettings set org.gnome.desktop.screensaver lock-enabled false
+    gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type 'nothing'
+    gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-battery-type 'nothing'
+    gsettings set org.gnome.desktop.session idle-delay 'uint32 0'
+    
+    # Configure GDM3 auto-login
+    echo "Configuring GDM3 auto-login..."
+    GDM_CONFIG="/etc/gdm3/custom.conf"
+    ACTION_TAKEN=false
+    USER="$(whoami)"
+    
+    if [ -z "$USER" ]; then
+        echo "Error: Could not determine the current user."
+        exit 1
+    fi
+    
+    echo "Checking GDM3 auto-login configuration for user '$USER'..."
+    
+    # Read current state
+    CURRENT_STATUS=$(sudo grep -E '^ *AutomaticLoginEnable' "$GDM_CONFIG" | cut -d'=' -f2 | xargs || true)
+    CURRENT_USER=$(sudo grep -E '^ *AutomaticLogin' "$GDM_CONFIG" | cut -d'=' -f2 | xargs || true)
+    
+    # Check if the configuration is already correct for the current user
+    if [ "$CURRENT_STATUS" = "true" ] && [ "$CURRENT_USER" = "$USER" ]; then
+        # State is correct, do nothing
+        :
+    else
+        # State is incorrect, perform necessary actions
+        if [ "$CURRENT_STATUS" = "true" ] && [ "$CURRENT_USER" != "$USER" ]; then
+            echo "Auto-login is enabled for '$CURRENT_USER'. Overwriting with '$USER'."
+            sudo sed -i -E "s|^#? *AutomaticLogin = .*|AutomaticLogin = $USER|" "$GDM_CONFIG"
+            ACTION_TAKEN=true
+        else
+            echo "Auto-login is disabled or misconfigured. Enabling for '$USER'."
+            sudo sed -i -E 's|^#? *AutomaticLoginEnable = .*|AutomaticLoginEnable = true|' "$GDM_CONFIG"
+            sudo sed -i -E "s|^#? *AutomaticLogin = .*|AutomaticLogin = $USER|" "$GDM_CONFIG"
+            ACTION_TAKEN=true
+        fi
+    fi
+    
+    # Final message
+    if [ "$ACTION_TAKEN" = true ]; then
+        sudo systemctl daemon-reload
+        echo "Auto-login configuration updated successfully."
+    else
+        echo "Auto-login configuration is already correct. No changes needed."
+    fi
+}
+
+install_classic_snaps() {
+    log_header "Installing Classic Snap Packages"
+    
+    if [ "$SKIP_CHECKBOX" = "true" ]; then
+        echo "Skipping checkbox snap installations (--skip-checkbox specified)"
+    else
+        sudo snap install checkbox22 --beta
+        sudo snap install checkbox-baoshan-classic --classic --edge
+        sudo snap install checkbox-ce-oem --channel=22.04/edge --classic
+        sudo snap stop --disable checkbox-ce-oem.remote-slave
+    fi
+    
+    sudo snap install genio-test-tool --devmode
+    sudo snap install bugit --devmode
+    sudo snap install x-test --channel=22/stable --devmode
+    sudo snap connect x-test:xtest x-test:xtest-319-rpmb
+    sudo snap start --enable x-test.tee-supplicant
+}
+
+install_uc_snaps() {
+    log_header "Installing UC-Specific Snap Packages"
+    
+    if [ "$SKIP_CHECKBOX" = "true" ]; then
+        echo "Skipping checkbox snap installations (--skip-checkbox specified)"
+    else
+        echo "Installing checkbox snaps for UC..."
+        sudo snap install checkbox22 --beta
+        sudo snap install checkbox-baoshan --edge --devmode
+        sudo snap install checkbox-ce-oem --channel="uc22/edge" --devmode
+        sudo snap connect checkbox-baoshan:provider-ce-oem checkbox-ce-oem:provider-ce-oem
+        sudo snap stop --disable checkbox-ce-oem.remote-slave
+    fi
+    
+    echo "Installing other UC snaps..."
+    sudo snap install genio-test-tool --devmode
+    sudo snap install bugit --devmode
+    
+    echo "Installing and connecting bluez..."
+    sudo snap install bluez
+    sudo snap connect checkbox-baoshan:bluez bluez:service
+    
+    echo "Installing x-test..."
+    sudo snap install x-test --channel=22/stable --devmode
+    sudo snap connect x-test:xtest x-test:xtest-319-rpmb
+    sudo snap start --enable x-test.tee-supplicant
+}
+
+install_gpu_and_frame() {
+    log_header "Installing Ubuntu Frame and GPU Drivers"
+    
+    local GPU_DRIVER_PLATFORM
+    case "$PLATFORM" in
+        "g1200")
+            GPU_DRIVER_PLATFORM="g1200"
+            ;;
+        "g700" | "g510")
+            GPU_DRIVER_PLATFORM="g700"
+            ;;
+        "g350")
+            GPU_DRIVER_PLATFORM="g350"
+            ;;
+    esac
+
+    echo "Installing GPU driver for $PLATFORM (using $GPU_DRIVER_PLATFORM package)"
+    sudo snap install "mediatek-genio-${GPU_DRIVER_PLATFORM}-gpu-drivers-core22" --candidate
+    sudo snap install ubuntu-frame --channel=22/stable
+    sudo snap disconnect ubuntu-frame:graphics-core22
+    sudo snap connect ubuntu-frame:graphics-core22 "mediatek-genio-${GPU_DRIVER_PLATFORM}-gpu-drivers-core22:graphics-core22"
+    sudo snap set ubuntu-frame config=
+    sudo snap stop --disable ubuntu-frame.daemon
+}
+
+configure_audio_group() {
+    log_header "Configuring Audio Group (UC)"
+    
+    USER="$(whoami)"
+    FILE_PATH="/var/lib/extrausers/group"
+    LINE_TO_APPEND="audio:x:1005:$USER"
+    
+    echo "Adding user '$USER' to audio group in $FILE_PATH"
+    echo "$LINE_TO_APPEND" | sudo tee -a "$FILE_PATH"
+    
+    echo "Verifying user groups:"
+    id "$USER"
+}
+
+enable_journal_logging() {
+    log_header "Enabling Journal Logging (UC)"
+    
+    JOURNAL_FOLDER="/var/log/journal"
+    
+    echo "Creating journal folder at $JOURNAL_FOLDER"
+    sudo mkdir -p "$JOURNAL_FOLDER"
+    
+    echo "Initializing systemd journal"
+    sudo systemd-tmpfiles --create --prefix "$JOURNAL_FOLDER"
+    
+    echo "Journal logging enabled successfully"
+}
+
+install_apt_packages() {
+    log_header "Installing APT Packages"
+    
+    # Conditional installation based on image type
+    if [ "$IMAGE_TYPE" = "Server" ]; then
+        echo "Installing ALSA utils and other dependencies"
+        sudo DEBIAN_FRONTEND=noninteractive apt-get update
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y alsa-utils apt-transport-https
+    else
+        echo "Installing dependencies"
+        sudo DEBIAN_FRONTEND=noninteractive apt-get update
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y apt-transport-https
+    fi
+
+    echo "Adding Baoshan PPA"
+    if [ -n "$PPA_USER" ] && [ -n "$PPA_PASSWD" ] && [ -n "$PPA_KEY" ]; then
+        echo "Using private Baoshan PPA with provided credentials"
+        python3 "$(dirname ${BASH_SOURCE[0]})/../add_private_ppa.py" \
+            "https://private-ppa.launchpadcontent.net/baoshan-ppa/baoshan-release/ubuntu" \
+            "$PPA_USER" \
+            "$PPA_PASSWD" \
+            "$PPA_KEY"
+    else
+        echo "Skipping private Baoshan PPA (credentials not provided)"
+    fi
+
+    echo "Adding Genio Public PPA"
+    sudo add-apt-repository -y "deb https://ppa.launchpadcontent.net/mediatek-genio/genio-public/ubuntu jammy main"
+
+    sudo DEBIAN_FRONTEND=noninteractive apt-get update
+
+    if [ -n "$CAM_ISP_PLATFORM" ]; then
+        echo "Installing MIPI Camera ISP package..."
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "linux-modules-mediatek-camisp-$CAM_ISP_PLATFORM-$(uname -r)"
+    fi
+
+    echo "Installing other camera packages (v4l-utils, GStreamer)..."
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y v4l-utils
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y gstreamer1.0-tools gstreamer1.0-plugins-good gstreamer1.0-plugins-base gstreamer1.0-plugins-bad gstreamer1.0-plugins-base-apps
+
+    if [ -n "$CAMD_PLATFORM" ]; then
+        echo "Installing MIPI Camera CAMD package..."
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "mediatek-camd-$CAMD_PLATFORM"
+    fi
+}
+
+download_firmware() {
+    log_header "Downloading Camera Firmware"
+    if [ "$AP1302_AR0830" = "True" ]; then
+        echo "Downloading Onsemi AP firmware for AP1302_AR0830..."
+        wget https://github.com/ONSemiconductor/ap1302_binaries/raw/refs/heads/main/MediaTek_Genio/ap1302_ar0830_single_fw.bin -O /tmp/ap1302_ar0830_single_fw.bin
+        sudo mv /tmp/ap1302_ar0830_single_fw.bin /lib/firmware/
+    fi
+    if [ "$AP1302_AR0430" = "True" ]; then
+        echo "Downloading Onsemi AP firmware for AP1302_AR0430..."
+        wget https://github.com/ONSemiconductor/ap1302_binaries/raw/refs/heads/main/MediaTek_Genio/ap1302_ar0430_single_fw.bin -O /tmp/ap1302_ar0430_single_fw.bin
+        sudo mv /tmp/ap1302_ar0430_single_fw.bin /lib/firmware/
+    fi
+}
+
+# --- Main Execution ---
+main() {
+    setup_user_and_system
+    
+    if [ "$IMAGE_TYPE" = "UC" ]; then
+        # UC-specific flow
+        install_uc_snaps
+        install_gpu_and_frame
+        configure_audio_group
+        enable_journal_logging
+    else
+        # Classic Desktop/Server flow
+        determine_platform_configs
+        
+        if [ "$IMAGE_TYPE" = "Desktop" ]; then
+            configure_desktop_settings
+        fi
+        
+        install_classic_snaps
+        
+        if [ "$IMAGE_TYPE" = "Server" ]; then
+            install_gpu_and_frame
+        fi
+        
+        install_apt_packages
+        download_firmware
+    fi
+
+    log_header "Setup Complete. System will reboot now."
+    sudo reboot
+}
+
+main "$@"
