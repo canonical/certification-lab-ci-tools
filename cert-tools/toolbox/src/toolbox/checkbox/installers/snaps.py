@@ -124,7 +124,6 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
                 f"{self.runtime.name}:custom-frontend",
             ],
             hide=True,
-            warn=True,
         )
         if result and result.exited == 0:
             logger.info("custom-frontend connection successful")

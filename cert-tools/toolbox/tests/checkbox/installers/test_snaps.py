@@ -514,7 +514,6 @@ class TestCheckboxSnapsInstaller:
                 "checkbox22:custom-frontend",
             ],
             hide=True,
-            warn=True,
         )
 
     def test_connect_custom_frontend_failure(self, mocker):
