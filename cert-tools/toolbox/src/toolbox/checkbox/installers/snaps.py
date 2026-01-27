@@ -41,12 +41,10 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
         self.runtime = runtime_helper.determine_checkbox_runtime(
             snap=frontends[0], arch=system["architecture"], store=self.store
         )
-        selected_snaps = [frontend.name for frontend in self.frontends] + [
-            self.runtime.name
-        ]
         self.connector = SnapConnector(
             predicates=(
-                [SelectSnaps(selected_snaps)] + (predicates if predicates else [])
+                [SelectSnaps(frontend.name for frontend in self.frontends)]
+                + (predicates if predicates else [])
             )
         )
 
@@ -105,18 +103,33 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
             strict = False
         return strict
 
-    def has_new_providers_interface(self, snap_name: str) -> bool:
-        """Check if the snap has the new providers interface (custom-frontend slot)."""
-        snap_connection_data = self.device.interfaces[SnapdAPIClient].get(
-            "connections", params={"select": "all"}
+    def connect_custom_frontend(self, frontend: SnapSpecifier) -> bool:
+        """Try to connect custom-frontend interface between runtime and frontend.
+
+        Attempts to connect {runtime}:custom-frontend {frontend}:custom-frontend.
+        Returns True if connection succeeds, False otherwise.
+        This serves as detection for whether the new providers interface is available.
+        """
+        logger.info(
+            "Attempting custom-frontend connection: %s:custom-frontend -> %s",
+            self.runtime.name,
+            frontend.name,
         )
-        for slot in snap_connection_data.get("slots", []):
-            if (
-                slot["snap"] == snap_name
-                and slot["interface"] == "content"
-                and slot.get("attrs", {}).get("content") == "custom-frontend"
-            ):
-                return True
+        result = self.device.run(
+            [
+                "sudo",
+                "snap",
+                "connect",
+                f"{frontend.name}:custom-frontend",
+                f"{self.runtime.name}:custom-frontend",
+            ],
+            hide=True,
+            warn=True,
+        )
+        if result and result.exited == 0:
+            logger.info("custom-frontend connection successful")
+            return True
+        logger.info("custom-frontend connection failed (interface not available)")
         return False
 
     def start_service(self, frontend: SnapSpecifier):
@@ -218,8 +231,8 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
             policy=Linear(times=30, delay=10),
         )
         frontend = self.frontends[0]
-        # Detect and use appropriate approach
-        if self.has_new_providers_interface(frontend.name):
+        # Try to connect custom-frontend interface - success means new providers interface
+        if self.connect_custom_frontend(frontend):
             logger.info("Using new providers interface for %s", frontend.name)
             self.start_service(frontend)
         else:
