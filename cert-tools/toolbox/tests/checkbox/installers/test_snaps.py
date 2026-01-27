@@ -554,8 +554,8 @@ class TestCheckboxSnapsInstaller:
 
         assert result is False
 
-    def test_start_service_agent_success(self, mocker):
-        """Test starting agent service on frontend succeeds."""
+    def test_start_service(self, mocker):
+        """Test starting agent service on frontend."""
         device = TrivialDevice(
             interfaces=[
                 SnapdAPIClient(),
@@ -589,97 +589,7 @@ class TestCheckboxSnapsInstaller:
 
         installer.start_service(frontends[0])
 
-        device.run.assert_called_once_with(
-            ["sudo", "snap", "start", "checkbox.agent"], hide=True
-        )
-
-    def test_start_service_fallback_to_runner(self, mocker):
-        """Test falling back to runner service on runtime when agent fails."""
-        device = TrivialDevice(
-            interfaces=[
-                SnapdAPIClient(),
-                RebootInterface(),
-                SystemStatusInterface(),
-                SnapInterface(),
-            ]
-        )
-        # First call (agent) fails, second call (runner) succeeds
-        device.run = mocker.Mock(
-            side_effect=[
-                Result(stdout="", exited=1),  # agent fails
-                Result(stdout="", exited=0),  # runner succeeds
-            ]
-        )
-
-        mocker.patch.object(
-            device.interfaces[SnapdAPIClient],
-            "get",
-            side_effect=[
-                {"architecture": "amd64", "store": None},
-                [{"store": "branded"}],
-            ],
-        )
-        mocker.patch(
-            "toolbox.checkbox.installers.snaps.CheckboxRuntimeHelper"
-        ).return_value.determine_checkbox_runtime.return_value = SnapSpecifier(
-            name="checkbox22", channel=Channel.from_string("latest/stable")
-        )
-
-        frontends = [
-            SnapSpecifier(name="checkbox", channel=Channel.from_string("22/stable"))
-        ]
-        installer = CheckboxSnapsInstaller(
-            device, TrivialDevice(), frontends, mocker.Mock()
-        )
-
-        installer.start_service(frontends[0])
-
-        assert device.run.call_count == 2
-        device.run.assert_any_call(
-            ["sudo", "snap", "start", "checkbox.agent"], hide=True
-        )
-        device.run.assert_any_call(
-            ["sudo", "snap", "start", "checkbox22.runner"], hide=True
-        )
-
-    def test_start_service_both_fail(self, mocker, caplog):
-        """Test warning logged when both agent and runner fail to start."""
-        device = TrivialDevice(
-            interfaces=[
-                SnapdAPIClient(),
-                RebootInterface(),
-                SystemStatusInterface(),
-                SnapInterface(),
-            ]
-        )
-        # Both calls fail
-        device.run = mocker.Mock(return_value=Result(stdout="", exited=1))
-
-        mocker.patch.object(
-            device.interfaces[SnapdAPIClient],
-            "get",
-            side_effect=[
-                {"architecture": "amd64", "store": None},
-                [{"store": "branded"}],
-            ],
-        )
-        mocker.patch(
-            "toolbox.checkbox.installers.snaps.CheckboxRuntimeHelper"
-        ).return_value.determine_checkbox_runtime.return_value = SnapSpecifier(
-            name="checkbox22", channel=Channel.from_string("latest/stable")
-        )
-
-        frontends = [
-            SnapSpecifier(name="checkbox", channel=Channel.from_string("22/stable"))
-        ]
-        installer = CheckboxSnapsInstaller(
-            device, TrivialDevice(), frontends, mocker.Mock()
-        )
-
-        installer.start_service(frontends[0])
-
-        assert device.run.call_count == 2
-        assert "Neither agent on checkbox nor runner on checkbox22" in caplog.text
+        device.run.assert_called_once_with(["sudo", "snap", "start", "checkbox.agent"])
 
     def test_configure_legacy_frontend(self, mocker):
         """Test configuring legacy frontend with agent/slave settings."""

@@ -4,15 +4,15 @@ import logging
 import os
 
 from snapstore.client import SnapstoreClient
-from toolbox.checkbox.installers import CheckboxInstaller
-from toolbox.checkbox.helpers.runtime import CheckboxRuntimeHelper
-from toolbox.checkbox.helpers.connector import SnapConnector, Predicate, SelectSnaps
-from toolbox.entities.snaps import SnapSpecifier
-from toolbox.devices import Device
-from toolbox.interfaces.snapd import SnapdAPIClient
-from toolbox.interfaces.snaps import SnapInterface, SnapInstallError
-from toolbox.retries import Linear
 
+from toolbox.checkbox.helpers.connector import Predicate, SelectSnaps, SnapConnector
+from toolbox.checkbox.helpers.runtime import CheckboxRuntimeHelper
+from toolbox.checkbox.installers import CheckboxInstaller
+from toolbox.devices import Device
+from toolbox.entities.snaps import SnapSpecifier
+from toolbox.interfaces.snapd import SnapdAPIClient
+from toolbox.interfaces.snaps import SnapInstallError, SnapInterface
+from toolbox.retries import Linear
 
 logger = logging.getLogger(__name__)
 
@@ -133,39 +133,9 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
         return False
 
     def start_service(self, frontend: SnapSpecifier):
-        """Start agent (frontend) or runner (runtime) service for new providers interface.
-
-        With the new providers interface:
-        - Agent service runs on the frontend snap
-        - Runner service runs on the runtime snap (fallback)
-        """
-        logger.info("Starting service for new providers interface")
-        # Try agent service on frontend first
-        result = self.device.run(
-            ["sudo", "snap", "start", f"{frontend.name}.agent"],
-            hide=True,
-        )
-        if result and result.exited == 0:
-            logger.info("Started agent service on frontend %s", frontend.name)
-            return
-        # Fall back to runner service on runtime
-        logger.info(
-            "agent not available on %s, trying runner on %s",
-            frontend.name,
-            self.runtime.name,
-        )
-        result = self.device.run(
-            ["sudo", "snap", "start", f"{self.runtime.name}.runner"],
-            hide=True,
-        )
-        if result and result.exited == 0:
-            logger.info("Started runner service on runtime %s", self.runtime.name)
-            return
-        logger.warning(
-            "Neither agent on %s nor runner on %s could be started",
-            frontend.name,
-            self.runtime.name,
-        )
+        """Start agent service on frontend for new providers interface."""
+        logger.info("Starting agent service on frontend %s", frontend.name)
+        self.device.run(["sudo", "snap", "start", f"{frontend.name}.agent"])
 
     def configure_legacy_frontend(self, frontend: SnapSpecifier):
         """Configure frontend using legacy agent/slave settings."""
@@ -196,7 +166,6 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
         # install primary frontend
         frontend = self.frontends[0]
         self.install_frontend_snap(frontend)
-        # Detection and configuration happens in restart() after connections are made
 
     def perform_connections(self):
         """Automatically connect snap interfaces for the installed Checkbox snaps."""
