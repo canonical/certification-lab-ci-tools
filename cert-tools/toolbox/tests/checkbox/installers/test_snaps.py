@@ -495,10 +495,10 @@ class TestCheckboxSnapsInstaller:
                 {
                     "plugs": [
                         {
-                            "snap": "checkbox",
+                            "snap": "checkbox22",
                             "interface": "content",
                             "attrs": {"content": "custom-frontend"},
-                            "connections": [{"snap": "checkbox22"}],
+                            "connections": [{"snap": "checkbox"}],
                         }
                     ]
                 },

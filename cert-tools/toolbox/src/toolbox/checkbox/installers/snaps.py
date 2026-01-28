@@ -106,7 +106,10 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
         return strict
 
     def has_custom_frontend_connected(self, frontend: SnapSpecifier) -> bool:
-        """Check if custom-frontend interface is connected between frontend and runtime."""
+        """Check if custom-frontend interface is connected between runtime and frontend.
+
+        The runtime has the plug, the frontend has the slot.
+        """
         snap_connection_data = self.device.interfaces[SnapdAPIClient].get(
             "connections", params={"select": "all"}
         )
@@ -114,19 +117,15 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
             plug = next(
                 plug
                 for plug in snap_connection_data["plugs"]
-                if plug["snap"] == frontend.name
+                if plug["snap"] == self.runtime.name
                 and plug["interface"] == "content"
                 and plug.get("attrs", {}).get("content") == "custom-frontend"
             )
-            next(
-                conn
-                for conn in plug["connections"]
-                if conn["snap"] == self.runtime.name
-            )
+            next(conn for conn in plug["connections"] if conn["snap"] == frontend.name)
             logger.info(
                 "custom-frontend interface connected: %s -> %s",
-                frontend.name,
                 self.runtime.name,
+                frontend.name,
             )
             return True
         except (StopIteration, KeyError):
