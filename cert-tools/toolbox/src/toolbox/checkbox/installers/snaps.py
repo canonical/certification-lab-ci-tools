@@ -41,10 +41,12 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
         self.runtime = runtime_helper.determine_checkbox_runtime(
             snap=frontends[0], arch=system["architecture"], store=self.store
         )
+        selected_snaps = [frontend.name for frontend in self.frontends] + [
+            self.runtime.name
+        ]
         self.connector = SnapConnector(
             predicates=(
-                [SelectSnaps(frontend.name for frontend in self.frontends)]
-                + (predicates if predicates else [])
+                [SelectSnaps(selected_snaps)] + (predicates if predicates else [])
             )
         )
 
@@ -103,38 +105,38 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
             strict = False
         return strict
 
-    def connect_custom_frontend(self, frontend: SnapSpecifier) -> bool:
-        """Try to connect custom-frontend interface between runtime and frontend.
-
-        Attempts to connect {runtime}:custom-frontend {frontend}:custom-frontend.
-        Returns True if connection succeeds, False otherwise.
-        This serves as detection for whether the new providers interface is available.
-        """
-        logger.info(
-            "Attempting custom-frontend connection: %s:custom-frontend -> %s",
-            self.runtime.name,
-            frontend.name,
+    def has_custom_frontend_connected(self, frontend: SnapSpecifier) -> bool:
+        """Check if custom-frontend interface is connected between frontend and runtime."""
+        snap_connection_data = self.device.interfaces[SnapdAPIClient].get(
+            "connections", params={"select": "all"}
         )
-        result = self.device.run(
-            [
-                "sudo",
-                "snap",
-                "connect",
-                f"{frontend.name}:custom-frontend",
-                f"{self.runtime.name}:custom-frontend",
-            ],
-            hide=True,
-        )
-        if result and result.exited == 0:
-            logger.info("custom-frontend connection successful")
+        try:
+            plug = next(
+                plug
+                for plug in snap_connection_data["plugs"]
+                if plug["snap"] == frontend.name
+                and plug["interface"] == "content"
+                and plug.get("attrs", {}).get("content") == "custom-frontend"
+            )
+            next(
+                conn
+                for conn in plug["connections"]
+                if conn["snap"] == self.runtime.name
+            )
+            logger.info(
+                "custom-frontend interface connected: %s -> %s",
+                frontend.name,
+                self.runtime.name,
+            )
             return True
-        logger.info("custom-frontend connection failed (interface not available)")
-        return False
+        except (StopIteration, KeyError):
+            logger.info("custom-frontend interface not connected")
+            return False
 
-    def start_service(self, frontend: SnapSpecifier):
-        """Start agent service on frontend for new providers interface."""
-        logger.info("Starting agent service on frontend %s", frontend.name)
-        self.device.run(["sudo", "snap", "start", f"{frontend.name}.agent"])
+    def start_service(self):
+        """Start agent service on runtime for new providers interface."""
+        logger.info("Starting agent service on runtime %s", self.runtime.name)
+        self.device.run(["sudo", "snap", "start", f"{self.runtime.name}.agent"])
 
     def configure_legacy_frontend(self, frontend: SnapSpecifier):
         """Configure frontend using legacy agent/slave settings."""
@@ -199,10 +201,10 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
             policy=Linear(times=30, delay=10),
         )
         frontend = self.frontends[0]
-        # Try to connect custom-frontend interface - success means new providers interface
-        if self.connect_custom_frontend(frontend):
+        # Check if custom-frontend interface is connected - means new providers interface
+        if self.has_custom_frontend_connected(frontend):
             logger.info("Using new providers interface for %s", frontend.name)
-            self.start_service(frontend)
+            self.start_service()
         else:
             logger.info("Using legacy interface for %s", frontend.name)
             self.configure_legacy_frontend(frontend)
