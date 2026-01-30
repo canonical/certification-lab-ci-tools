@@ -34,6 +34,12 @@ def parse_args() -> Namespace:
         help="Path to default manifest, if one cannot be fetched",
         type=Path,
     )
+    parser.add_argument(
+        "--no-hidden",
+        dest="with_hidden",
+        help="Don't include hidden manifests",
+        action="store_false",
+    )
     return parser.parse_args()
 
 
