@@ -43,15 +43,14 @@ def parse_args() -> Namespace:
     return parser.parse_args()
 
 
-def fetch_c3_manifest(cid: str, secure_id: str, output: Path):
+def fetch_c3_manifest(cid: str, secure_id: str, output: Path, with_hidden: bool = True):
     """
     Fetch manifest for `cid` from C3 and write it to the `output` file
     """
     # request the manifest from C3
-    response = requests.get(
-        "https://certification.canonical.com/api/v2/machines/"
-        f"{cid}/manifest?secure_id={secure_id}"
-    )
+    url = f"https://certification.canonical.com/api/v2/machines/{cid}/features/manifest"
+    params = {"secure_id": secure_id, "with_hidden": with_hidden}
+    response = requests.get(url, params=params)
     response.raise_for_status()
     # convert the manifest JSON from the response into
     # an INI-style configuration and write it to a file
@@ -82,7 +81,7 @@ def main() -> int:
 
     print(f"Fetching manifest for {args.cid} from C3")
     try:
-        fetch_c3_manifest(args.cid, args.secure_id, args.output)
+        fetch_c3_manifest(args.cid, args.secure_id, args.output, with_hidden=args.with_hidden)
         print(f"Fetched manifest for {args.cid} into '{args.output}'")
         return 0
     except requests.RequestException as error:
