@@ -35,6 +35,11 @@ def parse_args() -> Namespace:
         type=Path,
     )
     parser.add_argument(
+        "--new-endpoint",
+        help="Use new C3 endpoint with C3-native manifests",
+        action="store_true",
+    )
+    parser.add_argument(
         "--no-hidden",
         dest="with_hidden",
         help="Don't include hidden manifests",
