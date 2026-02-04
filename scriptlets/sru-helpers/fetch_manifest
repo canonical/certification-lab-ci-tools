@@ -34,18 +34,46 @@ def parse_args() -> Namespace:
         help="Path to default manifest, if one cannot be fetched",
         type=Path,
     )
+    parser.add_argument(
+        "--new-endpoint",
+        help="Use new C3 endpoint with C3-native manifests",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--no-hidden",
+        dest="with_hidden",
+        help="Don't include hidden manifests",
+        action="store_false",
+    )
     return parser.parse_args()
 
 
-def fetch_c3_manifest(cid: str, secure_id: str, output: Path):
+def fetch_legacy_manifest(cid: str, secure_id: str, output: Path, with_hidden: bool = True):
     """
     Fetch manifest for `cid` from C3 and write it to the `output` file
     """
     # request the manifest from C3
-    response = requests.get(
-        "https://certification.canonical.com/api/v2/machines/"
-        f"{cid}/manifest?secure_id={secure_id}"
-    )
+    url = f"https://certification.canonical.com/api/v2/machines/{cid}/manifest"
+    params = {"secure_id": secure_id}
+    response = requests.get(url, params=params)
+    response.raise_for_status()
+    # convert the manifest JSON from the response into
+    # an INI-style configuration and write it to a file
+    manifest_config = ConfigParser(delimiters=("=",))
+    manifest_config.optionxform = str
+    manifest_config["manifest"] = response.json()
+    with open(output, "w") as manifest_file:
+        manifest_config.write(manifest_file)
+
+
+def fetch_c3_manifest(cid: str, secure_id: str, output: Path, with_hidden: bool = True):
+    """
+    Fetch manifest for `cid` from C3 and write it to the `output` file
+    """
+    # request the manifest from C3
+    url = f"https://certification.canonical.com/api/v2/machines/{cid}/features/manifest"
+    params = {"secure_id": secure_id, "with_hidden": with_hidden}
+    response = requests.get(url, params=params)
     response.raise_for_status()
     # convert the manifest JSON from the response into
     # an INI-style configuration and write it to a file
@@ -74,9 +102,13 @@ def fetch_default_manifest(default: Path, output: Path):
 def main() -> int:
     args = parse_args()
 
+    # To ease transition to the new C3-native manifests,
+    # the new endpoint is only used with --new-endpoint flag
+    fetch = fetch_c3_manifest if args.new_endpoint else fetch_legacy_manifest
+
     print(f"Fetching manifest for {args.cid} from C3")
     try:
-        fetch_c3_manifest(args.cid, args.secure_id, args.output)
+        fetch(args.cid, args.secure_id, args.output, args.with_hidden)
         print(f"Fetched manifest for {args.cid} into '{args.output}'")
         return 0
     except requests.RequestException as error:
