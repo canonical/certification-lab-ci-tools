@@ -7,16 +7,30 @@ package-dir = {"" = "src"}
 
 [project]
 name = "toolbox"
-version = "0.1.0"
+version = "1.0.0"
 description = "Python scriptlets"
 authors = [
     {name = "George Boukeas", email = "george.boukeas@canonical.com"},
 ]
-requires-python = ">=3.8"
-dependencies = ["pyyaml"]
-
+requires-python = ">=3.10"
+dependencies = [
+    "packaging",
+    "pyyaml",
+    "pygithub",
+    "fabric>=3.2.2",
+]
 [project.scripts]
+wait-for-ssh = "toolbox.cli.wait_for_ssh:main"
+wait-for-packages-complete = "toolbox.cli.wait_for_packages_complete:main"
+wait-for-snap-changes = "toolbox.cli.wait_for_snap_changes:main"
+install-checkbox-snaps = "toolbox.cli.install_checkbox_snaps:main"
+install-checkbox-debs = "toolbox.cli.install_checkbox_debs:main"
+# deprecated, used by the bash version of install_checkbox_snaps
 snap_connections = "toolbox.snap_connections:main"
 
 [project.optional-dependencies]
-dev = ["pytest"]
+dev = ["pytest", "pytest-mock", "pytest-cov"]
+
+[tool.coverage.report]
+skip_covered = false
+skip_empty = false

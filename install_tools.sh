@@ -84,9 +84,9 @@ log "Installing agent dependencies"
 install_packages pipx python3-venv sshpass jq lsb-release python3-requests > /dev/null
 
 log "Installing agent tools"
-pipx install $TOOLS_PATH/cert-tools/launcher > /dev/null
-pipx install $TOOLS_PATH/cert-tools/toolbox > /dev/null
-pipx install $TOOLS_PATH/cert-tools/snapstore > /dev/null
+pipx install $TOOLS_PATH/cert-tools/launcher --force
+pipx install $TOOLS_PATH/cert-tools/toolbox --force
+pipx inject toolbox $TOOLS_PATH/cert-tools/snapstore --force
 
 # grab DEVICE_USER from the scenario file, if possible
 # (generally, a non-default DEVICE_USER needs to be set
@@ -99,7 +99,7 @@ fi
 if [ -z "$SKIP_DEVICE" ]; then
     # ensure that the device is reachable and copy over selected scriptlets
     # (testing reachability with --allow-starting is a single-try fallback option)
-    (wait_for_ssh --allow-degraded || check_for_ssh --allow-starting) \
+    (wait-for-ssh --allow-degraded || wait-for-ssh --allow-starting --times 1) \
     && echo "Installing selected scriptlets on the device" \
     && install_on_device \
     || exit 1
