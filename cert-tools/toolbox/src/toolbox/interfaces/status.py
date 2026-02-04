@@ -5,7 +5,6 @@ import logging
 from typing import Iterable
 
 from toolbox.interfaces import DeviceInterface
-from toolbox.devices import ExecutionError
 from toolbox.results import BooleanResult
 from toolbox.retries import retry, RetryPolicy
 
@@ -17,19 +16,15 @@ class SystemStatusInterface(DeviceInterface):
 
     def get_status(self, allowed: Iterable[str] | None = None) -> BooleanResult:
         """Check if system status is in the allowed set (defaults to 'running')."""
-        try:
-            result = self.device.run(
-                command=["systemctl", "is-system-running"], hide=True
-            )
-        except ExecutionError as error:
-            logger.info(
-                "Error retrieving status from %s: %s", self.device.host, str(error)
-            )
-            return BooleanResult(False)
+        result = self.device.run(command=["systemctl", "is-system-running"], hide=True)
+
         status = result.stdout.strip()
         if not status:
-            logger.info("No status retrieved from %s", self.device.host)
+            logger.info(
+                "Error retrieving status from %s: %s", self.device.host, result.stderr
+            )
             return BooleanResult(False)
+
         allowed = {"running"}.union(allowed or set())
         logger.info(
             "Checking status of %s: %s (allowed: %s)",

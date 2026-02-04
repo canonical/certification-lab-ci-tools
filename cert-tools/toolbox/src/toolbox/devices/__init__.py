@@ -22,13 +22,6 @@ logger = logging.getLogger(__name__)
 CommandType = str | Iterable[str]
 
 
-class ExecutionError(RuntimeError):
-    """Raised when command execution fails on a device."""
-
-    def __init__(self, command: str, device: "Device", error: Exception):
-        super().__init__(f"Failed to run '{command}' on {device}: {error}")
-
-
 class Device(ABC):
     """Abstract base class for devices that can execute commands."""
 
