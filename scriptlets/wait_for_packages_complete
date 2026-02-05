@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# DEPRECATED: Use 'wait-for-packages-complete' from the toolbox package instead.
+
+echo "WARNING: This script is deprecated. Use 'wait-for-packages-complete' from the toolbox package instead." >&2
+
 #
 # Wait until package operations (apt, dpkg) are complete.
 #

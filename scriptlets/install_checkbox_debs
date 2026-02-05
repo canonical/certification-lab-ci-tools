@@ -1,4 +1,7 @@
 #!/bin/bash
+# DEPRECATED: Use 'install-checkbox-debs' from the toolbox package instead.
+
+echo "WARNING: This script is deprecated. Use 'install-checkbox-debs' from the toolbox package instead." >&2
 
 # Install Checkbox on the DUT and the agent
 #

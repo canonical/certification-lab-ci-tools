@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# DEPRECATED: Use 'wait-for-snap-changes' from the toolbox package instead.
+
+echo "WARNING: This script is deprecated. Use 'wait-for-snap-changes' from the toolbox package instead." >&2
 
 # Wait for all snap changes on a remote device to complete
 #
