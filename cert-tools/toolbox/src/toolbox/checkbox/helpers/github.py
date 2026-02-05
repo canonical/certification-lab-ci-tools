@@ -1,16 +1,36 @@
 """Helper for working with Checkbox versions from the GitHub repository."""
 
+import logging
+import os
+
 from typing import Iterable
 
-from github import Github
+from github import Github, Auth
 from packaging.version import Version
+
+GH_TOKEN_ENV_VAR = "GITHUB_TOKEN"
+
+logger = logging.getLogger(__name__)
 
 
 class CheckboxVersionHelper:
-    """Helper for resolving Checkbox versions to specific GitHub commits."""
+    """Helper for resolving Checkbox versions to specific GitHub commits.
+    Authentication:
+        Set GITHUB_TOKEN environment variable to authenticate with GitHub API
+        and avoid rate limits (60 requests/hour without auth, 5000 with auth).
+    """
 
     def __init__(self):
-        self.repo = Github().get_repo("canonical/checkbox")
+        gh_token = os.environ.get(GH_TOKEN_ENV_VAR)
+
+        if gh_token:
+            auth = Auth.Token(gh_token)
+            self.repo = Github(auth=auth).get_repo("canonical/checkbox")
+        else:
+            logger.warning(
+                f"{GH_TOKEN_ENV_VAR} not set. This may result in rate limit exhaustion."
+            )
+            self.repo = Github().get_repo("canonical/checkbox")
 
     @staticmethod
     def get_release_and_offset(version: str) -> tuple[Version, int]:
