@@ -59,6 +59,7 @@ class SnapdAPIClient(DeviceInterface):
                 header[field] = value
         return header
 
+    @staticmethod
     def parse_chunked_body(raw_body: str) -> str:
         """Parse HTTP response body that has been chunked transfer-encoded.
 
