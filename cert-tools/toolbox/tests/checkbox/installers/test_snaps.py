@@ -474,8 +474,60 @@ class TestCheckboxSnapsInstaller:
         ]
         assert len(connect_calls) == 2
 
-    def test_has_custom_frontend_connected_true(self, mocker):
-        """Test detection when custom-frontend interface is connected."""
+    def test_custom_frontend_interface_true(self, mocker):
+        """Test returns True when all frontends have custom-frontend connected."""
+        device = TrivialDevice(
+            interfaces=[
+                SnapdAPIClient(),
+                RebootInterface(),
+                SystemStatusInterface(),
+                SnapInterface(),
+            ]
+        )
+
+        mocker.patch.object(
+            device.interfaces[SnapdAPIClient],
+            "get",
+            side_effect=[
+                {"architecture": "amd64", "store": None},
+                [{"store": "branded"}],
+                {
+                    "plugs": [
+                        {
+                            "snap": "checkbox22",
+                            "interface": "content",
+                            "attrs": {"content": "custom-frontend"},
+                            "connections": [
+                                {"snap": "checkbox"},
+                                {"snap": "checkbox-iiotg"},
+                            ],
+                        }
+                    ]
+                },
+            ],
+        )
+        mocker.patch(
+            "toolbox.checkbox.installers.snaps.CheckboxRuntimeHelper"
+        ).return_value.determine_checkbox_runtime.return_value = SnapSpecifier(
+            name="checkbox22", channel=Channel.from_string("latest/stable")
+        )
+
+        frontends = [
+            SnapSpecifier(name="checkbox", channel=Channel.from_string("22/stable")),
+            SnapSpecifier(
+                name="checkbox-iiotg", channel=Channel.from_string("22/stable")
+            ),
+        ]
+        installer = CheckboxSnapsInstaller(
+            device, TrivialDevice(), frontends, mocker.Mock()
+        )
+
+        result = installer.custom_frontend_interface()
+
+        assert result is True
+
+    def test_custom_frontend_interface_false_missing(self, mocker):
+        """Test returns False when some frontends lack custom-frontend interface."""
         device = TrivialDevice(
             interfaces=[
                 SnapdAPIClient(),
@@ -509,19 +561,23 @@ class TestCheckboxSnapsInstaller:
             name="checkbox22", channel=Channel.from_string("latest/stable")
         )
 
+        # Two frontends but only one is connected
         frontends = [
-            SnapSpecifier(name="checkbox", channel=Channel.from_string("22/stable"))
+            SnapSpecifier(name="checkbox", channel=Channel.from_string("22/stable")),
+            SnapSpecifier(
+                name="checkbox-iiotg", channel=Channel.from_string("22/stable")
+            ),
         ]
         installer = CheckboxSnapsInstaller(
             device, TrivialDevice(), frontends, mocker.Mock()
         )
 
-        result = installer.has_custom_frontend_connected(frontends[0])
+        result = installer.custom_frontend_interface()
 
-        assert result is True
+        assert result is False
 
-    def test_has_custom_frontend_connected_false(self, mocker):
-        """Test detection when custom-frontend interface is not connected."""
+    def test_custom_frontend_interface_false_no_plugs(self, mocker):
+        """Test returns False when no custom-frontend plugs exist."""
         device = TrivialDevice(
             interfaces=[
                 SnapdAPIClient(),
@@ -553,7 +609,7 @@ class TestCheckboxSnapsInstaller:
             device, TrivialDevice(), frontends, mocker.Mock()
         )
 
-        result = installer.has_custom_frontend_connected(frontends[0])
+        result = installer.custom_frontend_interface()
 
         assert result is False
 
@@ -634,9 +690,7 @@ class TestCheckboxSnapsInstaller:
             device, TrivialDevice(), frontends, mocker.Mock()
         )
 
-        mocker.patch.object(
-            installer, "has_custom_frontend_connected", return_value=True
-        )
+        mocker.patch.object(installer, "custom_frontend_interface", return_value=True)
         mock_configure_agent = mocker.patch.object(installer, "configure_agent")
 
         installer.restart()
@@ -688,9 +742,7 @@ class TestCheckboxSnapsInstaller:
             device, TrivialDevice(), frontends, mocker.Mock()
         )
 
-        mocker.patch.object(
-            installer, "has_custom_frontend_connected", return_value=False
-        )
+        mocker.patch.object(installer, "custom_frontend_interface", return_value=False)
         mock_configure_agent = mocker.patch.object(installer, "configure_agent")
 
         installer.restart()
