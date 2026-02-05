@@ -473,7 +473,7 @@ install_apt_packages() {
     echo "Adding Baoshan PPA"
     if [ -n "$PPA_USER" ] && [ -n "$PPA_PASSWD" ] && [ -n "$PPA_KEY" ]; then
         echo "Using private Baoshan PPA with provided credentials"
-        python3 "$(dirname ${BASH_SOURCE[0]})/../add_private_ppa.py" \
+        python3 "$(dirname ${BASH_SOURCE[0]})/add_private_ppa.py" \
             "https://private-ppa.launchpadcontent.net/baoshan-ppa/baoshan-release/ubuntu" \
             "$PPA_USER" \
             "$PPA_PASSWD" \
