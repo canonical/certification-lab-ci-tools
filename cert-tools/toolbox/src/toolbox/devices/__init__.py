@@ -70,16 +70,24 @@ class RemoteHost(Device):
         self,
         host: str,
         user: str | None = None,
+        password: str | None = None,
         config: SSHConfig | None = None,
         interfaces: Iterable[DeviceInterface] | None = None,
     ):
         super().__init__(host=host, interfaces=interfaces)
         self.user = user
+        self.password = password
         self.config = config
 
     def create_connection(self) -> Connection:
         """Create an SSH connection to the remote host."""
-        return Connection(self.host, user=self.user, config=self.config)
+        # Password is passed via connect_kwargs, see:
+        # https://docs.fabfile.org/en/latest/api/connection.html#connect-kwargs-arg
+        # https://docs.paramiko.org/en/latest/api/client.html
+        connect_kwargs = {"password": self.password} if self.password else None
+        return Connection(
+            self.host, user=self.user, config=self.config, connect_kwargs=connect_kwargs
+        )
 
     def run(self, command: CommandType, **kwargs) -> Result:
         """Execute a command remotely over SSH."""

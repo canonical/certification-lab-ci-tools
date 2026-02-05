@@ -34,13 +34,16 @@ class LabDevice(RemoteHost):
         self,
         host: str | None = None,
         user: str | None = None,
+        password: str | None = None,
         interfaces: Iterable[DeviceInterface] | None = None,
     ):
         if not (host := host or os.environ.get("DEVICE_IP")):
             raise LabExecutionError("Host is unspecified and 'DEVICE_IP' is not set")
+
         super().__init__(
             host=host,
             user=user or os.environ.get("DEVICE_USER", "ubuntu"),
+            password=password or os.environ.get("DEVICE_PWD"),
             config=self.create_config(),
             interfaces=interfaces,
         )
