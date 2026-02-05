@@ -62,7 +62,7 @@ class SnapInterface(
         logger.info("Snap operations are ongoing")
         ongoing_changes = [change for change in changes if not change["ready"]]
         for change in ongoing_changes:
-            print(f"{change['id']} {change['status']}: {change['summary']}")
+            logger.info(f"{change['id']} {change['status']}: {change['summary']}")
         return BooleanResult(
             False,
             "Changes: " + ", ".join(sorted(change["id"] for change in ongoing_changes)),
