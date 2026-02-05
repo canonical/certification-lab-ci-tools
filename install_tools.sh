@@ -86,6 +86,7 @@ install_packages pipx python3-venv sshpass jq lsb-release python3-requests > /de
 log "Installing agent tools"
 pipx install $TOOLS_PATH/cert-tools/launcher --force
 pipx install $TOOLS_PATH/cert-tools/toolbox --force
+pipx install $TOOLS_PATH/cert-tools/snapstore --force
 pipx inject toolbox $TOOLS_PATH/cert-tools/snapstore --force
 
 # grab DEVICE_USER from the scenario file, if possible
