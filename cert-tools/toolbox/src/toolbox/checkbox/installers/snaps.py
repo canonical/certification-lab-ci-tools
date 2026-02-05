@@ -4,15 +4,15 @@ import logging
 import os
 
 from snapstore.client import SnapstoreClient
-from toolbox.checkbox.installers import CheckboxInstaller
-from toolbox.checkbox.helpers.runtime import CheckboxRuntimeHelper
-from toolbox.checkbox.helpers.connector import SnapConnector, Predicate, SelectSnaps
-from toolbox.entities.snaps import SnapSpecifier
-from toolbox.devices import Device
-from toolbox.interfaces.snapd import SnapdAPIClient
-from toolbox.interfaces.snaps import SnapInterface, SnapInstallError
-from toolbox.retries import Linear
 
+from toolbox.checkbox.helpers.connector import Predicate, SelectSnaps, SnapConnector
+from toolbox.checkbox.helpers.runtime import CheckboxRuntimeHelper
+from toolbox.checkbox.installers import CheckboxInstaller
+from toolbox.devices import Device
+from toolbox.entities.snaps import SnapSpecifier
+from toolbox.interfaces.snapd import SnapdAPIClient
+from toolbox.interfaces.snaps import SnapInstallError, SnapInterface
+from toolbox.retries import Linear
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +111,7 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
             self.runtime.channel,
         )
         self.device.interfaces[SnapInterface].install(
-            self.runtime.name, self.runtime.channel, policy=Linear(times=30, delay=10)
+            self.runtime.name, self.runtime.channel, policy=Linear(times=60, delay=10)
         )
 
     def install_frontends(self):
