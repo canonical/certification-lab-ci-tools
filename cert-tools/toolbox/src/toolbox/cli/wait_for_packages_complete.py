@@ -16,7 +16,7 @@ def main():
     result = device.interfaces[DebInterface].wait_for_complete(
         policy=Linear(times=args.times - 1, delay=args.delay)
     )
-    sys.exit(1 - int(result))
+    sys.exit(0 if result else 1)
 
 
 if __name__ == "__main__":
