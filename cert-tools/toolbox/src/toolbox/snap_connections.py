@@ -4,9 +4,6 @@ Read the output of the `connections` endpoint of the snapd API
 from standard input and write a list of possible plug-to-slot
 connections to standard output.
 
-DEPRECATED: This module will be removed once bash scriplets are migrated.
-Do not use in new code.
-
 Ref: https://snapcraft.io/docs/snapd-api#heading--connections
 
 As an aid, here's one way of retrieving this data from the endpoint:
@@ -22,6 +19,7 @@ from argparse import ArgumentParser
 from collections import defaultdict
 import json
 import logging
+import warnings
 from pathlib import Path
 import re
 import sys
@@ -275,6 +273,14 @@ class Connector:
 
 
 def main(args: Optional[List[str]] = None):
+    warnings.warn(
+        """
+DEPRECATED: This module will be removed once bash scriplets are migrated.
+Do not use in new code. Use the toolbox package interfaces instead.""",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
     parser = ArgumentParser()
     parser.add_argument(
         "snaps",
