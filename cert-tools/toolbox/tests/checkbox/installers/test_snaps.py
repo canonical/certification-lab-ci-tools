@@ -5,15 +5,15 @@ import os
 import pytest
 from invoke import Result
 
+from tests.devices.trivial import TrivialDevice
 from toolbox.checkbox.installers.snaps import CheckboxSnapsInstaller
 from toolbox.entities.channels import Channel
 from toolbox.entities.connections import SnapConnection
 from toolbox.entities.snaps import SnapSpecifier
 from toolbox.interfaces.reboot import RebootInterface
 from toolbox.interfaces.snapd import SnapdAPIClient
-from toolbox.interfaces.snaps import SnapInterface, SnapInstallError
+from toolbox.interfaces.snaps import SnapInstallError, SnapInterface
 from toolbox.interfaces.status import SystemStatusInterface
-from tests.devices.trivial import TrivialDevice
 
 
 class TestCheckboxSnapsInstaller:
@@ -68,7 +68,7 @@ class TestCheckboxSnapsInstaller:
         assert installer.store == expected_store
 
     def test_init_creates_connector_with_predicates(self, mocker):
-        """Test initialization creates SnapConnector with predicates."""
+        """Test initialization creates SnapConnector with predicates including runtime."""
         device = TrivialDevice(
             interfaces=[
                 SnapdAPIClient(),
@@ -95,6 +95,9 @@ class TestCheckboxSnapsInstaller:
         mock_connector_class = mocker.patch(
             "toolbox.checkbox.installers.snaps.SnapConnector"
         )
+        mock_select_snaps = mocker.patch(
+            "toolbox.checkbox.installers.snaps.SelectSnaps"
+        )
         mock_predicate = mocker.Mock()
 
         frontends = [
@@ -108,6 +111,9 @@ class TestCheckboxSnapsInstaller:
             mocker.Mock(),
             predicates=[mock_predicate],
         )
+
+        # Verify SelectSnaps was created with both frontends and runtime
+        mock_select_snaps.assert_called_once_with(["checkbox", "checkbox22"])
 
         # Verify connector was created with SelectSnaps + custom predicates
         mock_connector_class.assert_called_once()
@@ -318,22 +324,25 @@ class TestCheckboxSnapsInstaller:
         installer.install_runtime()
 
         mock_install.assert_called_once_with(
-            "checkbox22", Channel.from_string("latest/stable"), policy=mocker.ANY
+            "checkbox22",
+            Channel.from_string("latest/stable"),
+            options=["--devmode"],
+            policy=mocker.ANY,
         )
 
     @pytest.mark.parametrize(
         "frontends,expected_disable_calls",
         [
-            # Single frontend - no secondary to disable
+            # Single frontend - disabled after install
             (
                 [
                     SnapSpecifier(
                         name="checkbox", channel=Channel.from_string("22/stable")
                     )
                 ],
-                0,
+                1,
             ),
-            # Two frontends - one secondary to disable
+            # Two frontends - both disabled after install
             (
                 [
                     SnapSpecifier(
@@ -343,9 +352,9 @@ class TestCheckboxSnapsInstaller:
                         name="checkbox-iiotg", channel=Channel.from_string("22/stable")
                     ),
                 ],
-                1,
+                2,
             ),
-            # Three frontends - two secondaries to disable
+            # Three frontends - all disabled after install
             (
                 [
                     SnapSpecifier(
@@ -358,7 +367,7 @@ class TestCheckboxSnapsInstaller:
                         name="checkbox-ce", channel=Channel.from_string("22/stable")
                     ),
                 ],
-                2,
+                3,
             ),
         ],
     )
@@ -402,11 +411,6 @@ class TestCheckboxSnapsInstaller:
             if call[0][0][1:3] == ["snap", "stop"]
         ]
         assert len(disable_calls) == expected_disable_calls
-
-        # Should always set agent and slave for primary frontend
-        calls = [call[0][0] for call in device.run.call_args_list]
-        assert ["sudo", "snap", "set", frontends[0].name, "agent=enabled"] in calls
-        assert ["sudo", "snap", "set", frontends[0].name, "slave=enabled"] in calls
 
     def test_perform_connections(self, mocker):
         """Test performing snap connections."""
@@ -470,8 +474,187 @@ class TestCheckboxSnapsInstaller:
         ]
         assert len(connect_calls) == 2
 
-    def test_restart(self, mocker):
-        """Test restarting frontend snap."""
+    def test_custom_frontend_interface_true(self, mocker):
+        """Test returns True when all frontends have custom-frontend connected."""
+        device = TrivialDevice(
+            interfaces=[
+                SnapdAPIClient(),
+                RebootInterface(),
+                SystemStatusInterface(),
+                SnapInterface(),
+            ]
+        )
+
+        mocker.patch.object(
+            device.interfaces[SnapdAPIClient],
+            "get",
+            side_effect=[
+                {"architecture": "amd64", "store": None},
+                [{"store": "branded"}],
+                {
+                    "plugs": [
+                        {
+                            "snap": "checkbox22",
+                            "interface": "content",
+                            "attrs": {"content": "custom-frontend"},
+                            "connections": [
+                                {"snap": "checkbox"},
+                                {"snap": "checkbox-iiotg"},
+                            ],
+                        }
+                    ]
+                },
+            ],
+        )
+        mocker.patch(
+            "toolbox.checkbox.installers.snaps.CheckboxRuntimeHelper"
+        ).return_value.determine_checkbox_runtime.return_value = SnapSpecifier(
+            name="checkbox22", channel=Channel.from_string("latest/stable")
+        )
+
+        frontends = [
+            SnapSpecifier(name="checkbox", channel=Channel.from_string("22/stable")),
+            SnapSpecifier(
+                name="checkbox-iiotg", channel=Channel.from_string("22/stable")
+            ),
+        ]
+        installer = CheckboxSnapsInstaller(
+            device, TrivialDevice(), frontends, mocker.Mock()
+        )
+
+        result = installer.custom_frontend_interface()
+
+        assert result is True
+
+    def test_custom_frontend_interface_false_missing(self, mocker):
+        """Test returns False when some frontends lack custom-frontend interface."""
+        device = TrivialDevice(
+            interfaces=[
+                SnapdAPIClient(),
+                RebootInterface(),
+                SystemStatusInterface(),
+                SnapInterface(),
+            ]
+        )
+
+        mocker.patch.object(
+            device.interfaces[SnapdAPIClient],
+            "get",
+            side_effect=[
+                {"architecture": "amd64", "store": None},
+                [{"store": "branded"}],
+                {
+                    "plugs": [
+                        {
+                            "snap": "checkbox22",
+                            "interface": "content",
+                            "attrs": {"content": "custom-frontend"},
+                            "connections": [{"snap": "checkbox"}],
+                        }
+                    ]
+                },
+            ],
+        )
+        mocker.patch(
+            "toolbox.checkbox.installers.snaps.CheckboxRuntimeHelper"
+        ).return_value.determine_checkbox_runtime.return_value = SnapSpecifier(
+            name="checkbox22", channel=Channel.from_string("latest/stable")
+        )
+
+        # Two frontends but only one is connected
+        frontends = [
+            SnapSpecifier(name="checkbox", channel=Channel.from_string("22/stable")),
+            SnapSpecifier(
+                name="checkbox-iiotg", channel=Channel.from_string("22/stable")
+            ),
+        ]
+        installer = CheckboxSnapsInstaller(
+            device, TrivialDevice(), frontends, mocker.Mock()
+        )
+
+        result = installer.custom_frontend_interface()
+
+        assert result is False
+
+    def test_custom_frontend_interface_false_no_plugs(self, mocker):
+        """Test returns False when no custom-frontend plugs exist."""
+        device = TrivialDevice(
+            interfaces=[
+                SnapdAPIClient(),
+                RebootInterface(),
+                SystemStatusInterface(),
+                SnapInterface(),
+            ]
+        )
+
+        mocker.patch.object(
+            device.interfaces[SnapdAPIClient],
+            "get",
+            side_effect=[
+                {"architecture": "amd64", "store": None},
+                [{"store": "branded"}],
+                {"plugs": []},
+            ],
+        )
+        mocker.patch(
+            "toolbox.checkbox.installers.snaps.CheckboxRuntimeHelper"
+        ).return_value.determine_checkbox_runtime.return_value = SnapSpecifier(
+            name="checkbox22", channel=Channel.from_string("latest/stable")
+        )
+
+        frontends = [
+            SnapSpecifier(name="checkbox", channel=Channel.from_string("22/stable"))
+        ]
+        installer = CheckboxSnapsInstaller(
+            device, TrivialDevice(), frontends, mocker.Mock()
+        )
+
+        result = installer.custom_frontend_interface()
+
+        assert result is False
+
+    def test_configure_agent(self, mocker):
+        """Test configuring agent snap with agent/slave settings and start."""
+        device = TrivialDevice(
+            interfaces=[
+                SnapdAPIClient(),
+                RebootInterface(),
+                SystemStatusInterface(),
+                SnapInterface(),
+            ]
+        )
+        device.run = mocker.Mock(return_value=Result(stdout="", exited=0))
+
+        mocker.patch.object(
+            device.interfaces[SnapdAPIClient],
+            "get",
+            side_effect=[
+                {"architecture": "amd64", "store": None},
+                [{"store": "branded"}],
+            ],
+        )
+        mocker.patch(
+            "toolbox.checkbox.installers.snaps.CheckboxRuntimeHelper"
+        ).return_value.determine_checkbox_runtime.return_value = SnapSpecifier(
+            name="checkbox22", channel=Channel.from_string("latest/stable")
+        )
+
+        frontends = [
+            SnapSpecifier(name="checkbox", channel=Channel.from_string("22/stable"))
+        ]
+        installer = CheckboxSnapsInstaller(
+            device, TrivialDevice(), frontends, mocker.Mock()
+        )
+
+        installer.configure_agent(frontends[0])
+
+        calls = [call[0][0] for call in device.run.call_args_list]
+        assert ["sudo", "snap", "set", "checkbox", "agent=enabled"] in calls
+        assert ["sudo", "snap", "set", "checkbox", "slave=enabled"] in calls
+        assert ["sudo", "snap", "start", "--enable", "checkbox"] in calls
+
+    def test_restart_new_interface(self, mocker):
+        """Test restart with new providers interface configures runtime as agent."""
         device = TrivialDevice(
             interfaces=[
                 SnapdAPIClient(),
@@ -507,13 +690,72 @@ class TestCheckboxSnapsInstaller:
             device, TrivialDevice(), frontends, mocker.Mock()
         )
 
+        mocker.patch.object(installer, "custom_frontend_interface", return_value=True)
+        mock_configure_agent = mocker.patch.object(installer, "configure_agent")
+
         installer.restart()
 
-        # Should refresh runtime and restart frontend
+        # Should refresh runtime with devmode
         mock_install.assert_called_once_with(
-            "checkbox22", Channel.from_string("latest/stable"), policy=mocker.ANY
+            "checkbox22",
+            Channel.from_string("latest/stable"),
+            options=["--devmode"],
+            policy=mocker.ANY,
         )
-        device.run.assert_called_once_with(["sudo", "snap", "restart", "checkbox"])
+        # Should configure runtime as agent for new interface
+        mock_configure_agent.assert_called_once_with(runtime)
+
+    def test_restart_legacy_interface(self, mocker):
+        """Test restart with legacy interface configures frontend as agent."""
+        device = TrivialDevice(
+            interfaces=[
+                SnapdAPIClient(),
+                RebootInterface(),
+                SystemStatusInterface(),
+                SnapInterface(),
+            ]
+        )
+        device.run = mocker.Mock(return_value=Result(stdout="", exited=0))
+
+        mocker.patch.object(
+            device.interfaces[SnapdAPIClient],
+            "get",
+            side_effect=[
+                {"architecture": "amd64", "store": None},
+                [{"store": "branded"}],
+            ],
+        )
+
+        runtime = SnapSpecifier(
+            name="checkbox22", channel=Channel.from_string("latest/stable")
+        )
+        mocker.patch(
+            "toolbox.checkbox.installers.snaps.CheckboxRuntimeHelper"
+        ).return_value.determine_checkbox_runtime.return_value = runtime
+
+        mock_install = mocker.patch.object(device.interfaces[SnapInterface], "install")
+
+        frontends = [
+            SnapSpecifier(name="checkbox", channel=Channel.from_string("22/stable"))
+        ]
+        installer = CheckboxSnapsInstaller(
+            device, TrivialDevice(), frontends, mocker.Mock()
+        )
+
+        mocker.patch.object(installer, "custom_frontend_interface", return_value=False)
+        mock_configure_agent = mocker.patch.object(installer, "configure_agent")
+
+        installer.restart()
+
+        # Should refresh runtime with devmode
+        mock_install.assert_called_once_with(
+            "checkbox22",
+            Channel.from_string("latest/stable"),
+            options=["--devmode"],
+            policy=mocker.ANY,
+        )
+        # Should configure frontend as agent for legacy interface
+        mock_configure_agent.assert_called_once_with(frontends[0])
 
     def test_install_on_device(self, mocker):
         """Test install_on_device orchestrates all installation steps."""

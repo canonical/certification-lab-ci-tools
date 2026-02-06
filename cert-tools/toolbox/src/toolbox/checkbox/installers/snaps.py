@@ -1,5 +1,6 @@
 """Checkbox installer for snap-based installations."""
 
+import contextlib
 import logging
 import os
 
@@ -41,10 +42,12 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
         self.runtime = runtime_helper.determine_checkbox_runtime(
             snap=frontends[0], arch=system["architecture"], store=self.store
         )
+        selected_snaps = [frontend.name for frontend in self.frontends] + [
+            self.runtime.name
+        ]
         self.connector = SnapConnector(
             predicates=(
-                [SelectSnaps(frontend.name for frontend in self.frontends)]
-                + (predicates if predicates else [])
+                [SelectSnaps(selected_snaps)] + (predicates if predicates else [])
             )
         )
 
@@ -103,6 +106,43 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
             strict = False
         return strict
 
+    def custom_frontend_interface(self) -> bool:
+        """
+        Check if ALL frontends have the custom-frontend interface connected.
+        """
+        snap_connection_data = self.device.interfaces[SnapdAPIClient].get(
+            "connections", params={"select": "all"}
+        )
+
+        frontends = {f.name for f in self.frontends}
+        for plug in snap_connection_data.get("plugs", []):
+            if (
+                plug["snap"] == self.runtime.name
+                and plug["interface"] == "content"
+                and plug.get("attrs", {}).get("content") == "custom-frontend"
+            ):
+                custom_frontend_plug = plug
+                break
+        else:
+            logger.warning("Installed runtime doesn't provide a custom-frontend plug")
+            return False
+
+        for conn in custom_frontend_plug.get("connections", []):
+            with contextlib.suppress(KeyError):
+                frontends.remove(conn["snap"])
+
+        if frontends:
+            return False
+
+        return True
+
+    def configure_agent(self, agent: SnapSpecifier):
+        """Configure checkbox snap agent."""
+        logger.info("Configuring agent: %s", agent.name)
+        self.device.run(["sudo", "snap", "set", agent.name, "agent=enabled"])
+        self.device.run(["sudo", "snap", "set", agent.name, "slave=enabled"])
+        self.device.run(["sudo", "snap", "start", "--enable", agent.name])
+
     def install_runtime(self):
         """Install the appropriate Checkbox runtime snap for the frontend."""
         logger.info(
@@ -111,20 +151,17 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
             self.runtime.channel,
         )
         self.device.interfaces[SnapInterface].install(
-            self.runtime.name, self.runtime.channel, policy=Linear(times=60, delay=10)
+            self.runtime.name,
+            self.runtime.channel,
+            options=["--devmode"],
+            policy=Linear(times=60, delay=10),
         )
 
     def install_frontends(self):
         """Install all frontend snaps."""
-        # install secondary frontends
-        for frontend in self.frontends[1:]:
+        for frontend in self.frontends:
             self.install_frontend_snap(frontend)
             self.device.run(["sudo", "snap", "stop", "--disable", frontend.name])
-        # install primary frontend
-        frontend = self.frontends[0]
-        self.install_frontend_snap(frontend)
-        self.device.run(["sudo", "snap", "set", frontend.name, "agent=enabled"])
-        self.device.run(["sudo", "snap", "set", frontend.name, "slave=enabled"])
 
     def perform_connections(self):
         """Automatically connect snap interfaces for the installed Checkbox snaps."""
@@ -155,11 +192,18 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
         self.device.interfaces[SnapInterface].install(
             self.runtime.name,
             self.runtime.channel,
+            options=["--devmode"],
             policy=Linear(times=30, delay=10),
         )
-        frontend = self.frontends[0]
-        logger.info("Restarting primary frontend snap: %s", frontend.name)
-        self.device.run(["sudo", "snap", "restart", frontend.name])
+
+        if self.custom_frontend_interface():
+            logger.info("Using new providers interface with runtime agent")
+            agent = self.runtime
+        else:
+            logger.info("Using legacy interface with frontend agent")
+            agent = self.frontends[0]
+
+        self.configure_agent(agent)
 
     def install_on_device(self):
         self.install_runtime()
