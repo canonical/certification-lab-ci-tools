@@ -1,4 +1,7 @@
 #!/bin/bash
+# DEPRECATED: Use 'install-checkbox-snaps' from the toolbox package instead.
+
+echo "WARNING: This script is deprecated. Use 'install-checkbox-snaps' from the toolbox package instead." >&2
 
 # Install Checkbox on the DUT and the agent
 #
@@ -8,7 +11,7 @@
 # Also installs Checkbox on the agent from source, matching the version on the DUT.
 # Finally the installation on the DUT is verified to check that the machine is
 # ready to run tests.
-# 
+#
 # Accepts a Checkbox frontend snap specification in the form: frontend=track/risk
 # as a required positional argument. Additional frontends can be installed
 # by the --additional argument followed by more specifications.
@@ -38,7 +41,7 @@ parse_snap_specification() {
     if [ -z "$NAME" ] || [ -z "$TRACK" ] || [ -z "$RISK" ]; then
         echo "'$SPEC' is not a valid snap specification in the form <snap>=<track>/<channel>" >&2
         return 1
-    fi  
+    fi
     # print a space-separated list of the specification components
     echo "$NAME $TRACK $RISK"
     return 0
@@ -104,7 +107,7 @@ install_checkbox_frontend_snap_on_device() {
         ${UBUNTU_STORE_AUTH:+ UBUNTU_STORE_AUTH=$UBUNTU_STORE_AUTH} \
         snap download $FRONTEND_NAME --channel=$FRONTEND_CHANNEL --basename=$FRONTEND_NAME
     _run sudo snap ack $FRONTEND_NAME.assert
-    
+
     set +e
     _run sudo snap install --no-wait --devmode $FRONTEND_NAME.snap > /dev/null 2>&1
     SNAP_INSTALL_STATUS=$?

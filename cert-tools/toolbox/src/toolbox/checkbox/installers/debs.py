@@ -58,7 +58,7 @@ class CheckboxDebsInstaller(CheckboxInstaller):
         return "checkbox-cli"
 
     def add_repositories(self):
-        repositories = self.repositories + [f"ppa:checkbox-dev/{self.risk}"]
+        repositories = self.repositories + [f"ppa:checkbox-dev/{self.risk.value}"]
         for repository in repositories:
             result = self.device.interfaces[DebInterface].add_repository(repository)
             if not result:

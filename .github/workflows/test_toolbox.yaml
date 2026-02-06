@@ -1,8 +1,6 @@
 name: Test the toolbox package
 on:
-  push:
-    branches-ignore:
-      - 'main'
+  pull_request:
     paths:
       - 'cert-tools/toolbox/**'
       - '.github/workflows/test_toolbox.yaml'

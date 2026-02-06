@@ -92,10 +92,10 @@ class DebInterface(DeviceInterface):
         if not complete:
             logger.info("Package operations are ongoing")
             if processes:
-                print(processes.stdout, end="")
+                logger.info(processes.stdout.rstrip())
             if files:
                 # fuser writes diagnostic information to stderr
-                print(files.stderr, end="")
+                logger.info(files.stderr.rstrip())
         else:
             logger.info("No package operations are ongoing")
         return complete

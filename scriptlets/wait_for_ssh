@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
+# DEPRECATED: Use 'wait-for-ssh' from the toolbox package instead.
+
+echo "WARNING: This script is deprecated. Use 'wait-for-ssh' from the toolbox package instead." >&2
 
 # Wait until a remote device is fully up and running.
-# 
+#
 # See `check_for_ssh` (which is repeatedly called here) for details
 #
 # Return value:
-# 
+#
 # 0 if `check_for_ssh` is successful
 # 1 if `check_for_ssh` cannot be executed or is unsuccesful on the last retry
 # >=124 in case of a timeout waiting for `check_for_ssh` on the last retry

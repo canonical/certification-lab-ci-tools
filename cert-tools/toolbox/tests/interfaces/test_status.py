@@ -3,7 +3,6 @@
 import pytest
 
 from invoke import Result
-from toolbox.devices import ExecutionError
 from toolbox.interfaces.status import SystemStatusInterface
 from toolbox.results import BooleanResult
 from toolbox.retries import Linear
@@ -52,12 +51,14 @@ class TestGetStatus:
     def test_get_status_returns_false_on_execution_error(self, mocker):
         """Test that get_status returns False when command execution fails."""
         device = TrivialDevice(interfaces=[SystemStatusInterface()])
-        mock_error = ExecutionError(
-            command="systemctl is-system-running",
-            device=device,
-            error=RuntimeError("SSH connection failed"),
+        # Mock a failed Result (not ok)
+        device.run = mocker.Mock(
+            return_value=Result(
+                command="systemctl is-system-running",
+                exited=255,
+                stderr="SSH connection failed",
+            )
         )
-        device.run = mocker.Mock(side_effect=mock_error)
 
         result = device.interfaces[SystemStatusInterface].get_status()
 
@@ -168,8 +169,8 @@ class TestWaitForStatus:
             # Execution errors then success
             (
                 [
-                    ExecutionError("cmd", None, RuntimeError("SSH connection failed")),
-                    ExecutionError("cmd", None, RuntimeError("SSH connection failed")),
+                    Result(command="cmd", exited=255, stderr="SSH connection failed"),
+                    Result(command="cmd", exited=255, stderr="SSH connection failed"),
                     Result(stdout="running\n", exited=0),
                 ],
                 None,
@@ -194,9 +195,9 @@ class TestWaitForStatus:
             # Mixed errors and empty output then success
             (
                 [
-                    ExecutionError("cmd", None, RuntimeError("SSH connection failed")),
+                    Result(command="cmd", exited=255, stderr="SSH connection failed"),
                     Result(stdout="", exited=1),
-                    ExecutionError("cmd", None, RuntimeError("SSH connection failed")),
+                    Result(command="cmd", exited=255, stderr="SSH connection failed"),
                     Result(stdout="starting\n", exited=1),
                     Result(stdout="running\n", exited=0),
                 ],
@@ -209,9 +210,9 @@ class TestWaitForStatus:
             # Exhaust retries with only errors
             (
                 [
-                    ExecutionError("cmd", None, RuntimeError("SSH connection failed")),
-                    ExecutionError("cmd", None, RuntimeError("SSH connection failed")),
-                    ExecutionError("cmd", None, RuntimeError("SSH connection failed")),
+                    Result(command="cmd", exited=255, stderr="SSH connection failed"),
+                    Result(command="cmd", exited=255, stderr="SSH connection failed"),
+                    Result(command="cmd", exited=255, stderr="SSH connection failed"),
                 ],
                 None,
                 Linear(times=2, delay=0),
