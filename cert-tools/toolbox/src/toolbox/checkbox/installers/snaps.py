@@ -138,7 +138,7 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
 
     def configure_agent(self, agent: SnapSpecifier):
         """Configure checkbox snap agent."""
-        logger.info("Configuring agent: %s", agent.name)
+        logger.info("Configuring legacy agent: %s", agent.name)
         self.device.run(["sudo", "snap", "set", agent.name, "agent=enabled"])
         self.device.run(["sudo", "snap", "set", agent.name, "slave=enabled"])
         self.device.run(["sudo", "snap", "start", "--enable", agent.name])
