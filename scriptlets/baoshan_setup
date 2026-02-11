@@ -316,7 +316,7 @@ configure_desktop_settings() {
     echo "Configuring GDM3 auto-login..."
     GDM_CONFIG="/etc/gdm3/custom.conf"
     ACTION_TAKEN=false
-    USER="$(whoami)"
+    USER="ubuntu"
     
     if [ -z "$USER" ]; then
         echo "Error: Could not determine the current user."
