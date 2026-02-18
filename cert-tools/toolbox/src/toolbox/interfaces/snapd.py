@@ -121,7 +121,7 @@ class SnapdAPIClient(DeviceInterface):
         url = self.create_get_request_url(endpoint, params)
         request = self.create_get_request(url)
         response = self.device.run(
-            ["nc", "-N", "-U", "/run/snapd.socket"],
+            ["nc", "-q", "1", "-U", "/run/snapd.socket"],
             in_stream=StringIO(request),
             echo_stdin=False,
             hide=True,
