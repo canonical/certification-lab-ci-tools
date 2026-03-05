@@ -41,7 +41,9 @@ def download_package_xz(url: str, cache_path: Path) -> Path:
 
     req = Request(url, headers=headers)
     try:
-        with urlopen(req) as resp:
+        # Note: timeout is because sometimes LP hangs forever instead of
+        #       returning an error. Re-doing the request fixes it
+        with urlopen(req, timeout=120) as resp:
             dest.write_bytes(resp.read())
             meta = {}
             if etag := resp.headers.get("ETag"):
