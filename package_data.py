@@ -1,4 +1,18 @@
 #!/usr/bin/env python3
+"""
+This program creates a cached json index of the archive
+
+Given an input series, pocket, repo and arch, this tool creates a json index
+of the archive that pairs a package name to their current version. If the json
+index already exists, then it is updated instead of re-created. This makes
+the index stable. Even if a package is yianked from the archive, the version
+string doesn't change until an update is issued, making this ideal to use
+with URLTriggers.
+
+This script caches in the cwd the archive Package.xz to avoid re-downloading
+them on re-runs.
+"""
+
 import argparse
 import re
 import json
@@ -13,6 +27,8 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 RETRY = 5
+# Note: Leave this in cwd as I'm not sure jenkins workspace keeps anything
+#       outside cwd
 CACHE = Path.cwd() / ".cache"
 
 
@@ -60,13 +76,21 @@ def download_package_xz(url: str, cache_path: Path) -> Path:
     return dest
 
 
-def parse_package_name_version(package_spec: str) -> dict:
+def _parse_package_name_version(package_spec: str) -> tuple:
     pkg_name = re.search("Package: (.+)", package_spec)
     pkg_ver = re.search("Version: (.+)", package_spec)
     if pkg_name and pkg_ver:
         # Periods in json keys are bad, convert them to _
         pkg_name_key = pkg_name.group(1).replace(".", "_")
         return (pkg_name_key, pkg_ver.group(1))
+    raise ValueError(f"Unable to parse package_spec '{package_spec}'")
+
+
+def parse_package_name_version(package_spec: str) -> tuple | None:
+    try:
+        return _parse_package_name_version(package_spec)
+    except ValueError as e:
+        logging.error(str(e))
 
 
 def parse_package_xz(path: Path) -> dict:
