@@ -196,7 +196,7 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
             policy=Linear(times=30, delay=10),
         )
 
-        if False and self.custom_frontend_interface():  # XXX currently broken
+        if self.custom_frontend_interface():
             logger.info("Using new providers interface with runtime agent")
             agent = self.runtime
         else:
