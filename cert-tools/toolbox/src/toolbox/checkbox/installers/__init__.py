@@ -34,7 +34,7 @@ class CheckboxInstaller(ABC):
             "Checking if the Checkbox service is active on %s", self.device.host
         )
         result = self.device.run(["systemctl", "is-active", "*checkbox*.service"])
-        if not result or result.stdout.strip() != "active":
+        if not result or "active" not in result.stdout.strip():
             raise CheckboxInstallerError(
                 f"Checkbox service is not active on {self.device.host}"
             )
