@@ -32,7 +32,7 @@ class TestCheckboxInstaller:
         installer.check_service()
 
         device.run.assert_called_once_with(
-            ["systemctl", "is-active", "*checkbox*.service"]
+            ["systemctl", "is-active", "*checkbox*remote-slave.service"]
         )
 
     def test_check_service_inactive(self, mocker):
