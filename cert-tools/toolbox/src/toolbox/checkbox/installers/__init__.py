@@ -33,8 +33,25 @@ class CheckboxInstaller(ABC):
         logger.info(
             "Checking if the Checkbox service is active on %s", self.device.host
         )
-        result = self.device.run(["systemctl", "is-active", "*checkbox*remote-slave.service"])
-        if not result or result.stdout.strip() != "active":
+        # Old providers use: "checkbox-cli-wrapper slave" which is deprecated.
+        slave_active = (
+            self.device.run(
+                ["systemctl", "is-active", "*checkbox*slave.service"]
+            ).return_code
+            == 0
+        )
+        # New providers should use: "checkbox-cli-wrapper run-agent".
+        agent_active = (
+            self.device.run(
+                ["systemctl", "is-active", "*checkbox*agent.service"]
+            ).return_code
+            == 0
+        )
+        if slave_active and agent_active:
+            raise CheckboxInstallerError(
+                "Checkbox service can only be either slave or agent"
+            )
+        elif not (slave_active or agent_active):
             raise CheckboxInstallerError(
                 f"Checkbox service is not active on {self.device.host}"
             )
