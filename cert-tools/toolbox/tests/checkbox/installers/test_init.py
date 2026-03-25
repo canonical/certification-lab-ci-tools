@@ -26,36 +26,57 @@ class TestCheckboxInstaller:
     def test_check_service_active(self, mocker):
         """Test check_service when service is active."""
         device = TrivialDevice()
-        device.run = mocker.Mock(return_value=Result(stdout="active\n", exited=0))
+        device.run = mocker.Mock(
+            side_effect=[
+                Result(stdout="inactive\n", exited=3),  # Check for slave
+                Result(stdout="active\n", exited=0),  # Check for agent
+            ]
+        )
 
         installer = ConcreteInstaller(device, TrivialDevice())
         installer.check_service()
 
-        device.run.assert_called_once_with(
-            ["systemctl", "is-active", "*checkbox*.service"]
+        assert device.run.call_count == 2
+        device.run.assert_has_calls(
+            [
+                mocker.call(["systemctl", "is-active", "*checkbox*slave.service"]),
+                mocker.call(["systemctl", "is-active", "*checkbox*agent.service"]),
+            ]
         )
 
     def test_check_service_inactive(self, mocker):
         """Test check_service raises error when service is not active."""
         device = TrivialDevice()
-        device.run = mocker.Mock(return_value=Result(stdout="inactive\n", exited=1))
+        device.run = mocker.Mock(
+            side_effect=[
+                Result(stdout="inactive\n", exited=3),  # Check for slave
+                Result(stdout="inactive\n", exited=3),  # Check for agent
+            ]
+        )
 
         installer = ConcreteInstaller(device, TrivialDevice())
 
         with pytest.raises(
-            CheckboxInstallerError, match="Checkbox service is not active"
+            CheckboxInstallerError,
+            match=f"Checkbox service is not active on {device.host}",
         ):
             installer.check_service()
 
     def test_check_service_no_result(self, mocker):
         """Test check_service raises error when command fails."""
         device = TrivialDevice()
-        device.run = mocker.Mock(return_value=None)
+        device.run = mocker.Mock(
+            side_effect=[
+                Result(stdout="", exited=1),  # Check for slave
+                Result(stdout="", exited=1),  # Check for agent
+            ]
+        )
 
         installer = ConcreteInstaller(device, TrivialDevice())
 
         with pytest.raises(
-            CheckboxInstallerError, match="Checkbox service is not active"
+            CheckboxInstallerError,
+            match=f"Checkbox service is not active on {device.host}",
         ):
             installer.check_service()
 
