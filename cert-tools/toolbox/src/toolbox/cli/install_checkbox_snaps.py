@@ -32,9 +32,9 @@ def main():
         "--blacklist", type=Path, help="Path to the connections blacklist"
     )
     parser.add_argument(
-        "--skip-agent-install",
+        "--skip-controller-install",
         action="store_true",
-        help="Skip local installation of Checkbox from source on the agent",
+        help="Skip local installation of Checkbox from source on the controller",
     )
     args = parser.parse_args()
 
@@ -56,7 +56,7 @@ def main():
         snapstore=SnapstoreClient(create_base_client(TOKEN_ENVIRONMENT_VARIABLE)),
         predicates=[Blacklist.from_file(args.blacklist)] if args.blacklist else None,
     )
-    installer.install(skip_agent_install=args.skip_agent_install)
+    installer.install(skip_controller_install=args.skip_controller_install)
 
 
 if __name__ == "__main__":
