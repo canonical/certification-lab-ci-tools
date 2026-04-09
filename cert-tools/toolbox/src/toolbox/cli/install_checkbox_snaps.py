@@ -31,6 +31,11 @@ def main():
     parser.add_argument(
         "--blacklist", type=Path, help="Path to the connections blacklist"
     )
+    parser.add_argument(
+        "--skip-agent-install",
+        action="store_true",
+        help="Skip local installation of Checkbox from source on the agent",
+    )
     args = parser.parse_args()
 
     frontends = [SnapSpecifier.from_string(args.frontend)] + [
@@ -51,7 +56,7 @@ def main():
         snapstore=SnapstoreClient(create_base_client(TOKEN_ENVIRONMENT_VARIABLE)),
         predicates=[Blacklist.from_file(args.blacklist)] if args.blacklist else None,
     )
-    installer.install()
+    installer.install(skip_agent_install=args.skip_agent_install)
 
 
 if __name__ == "__main__":
