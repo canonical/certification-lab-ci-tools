@@ -85,9 +85,15 @@ class CheckboxInstaller(ABC):
         """Install Checkbox on the device."""
         raise NotImplementedError
 
-    def install(self, *args, **kwargs):
+    def install(self, *args, skip_controller_install: bool = False, **kwargs):
         """Install Checkbox on both device and agent, ensuring versions match."""
         self.install_on_device(*args, **kwargs)
         self.check_service()
         version = self.get_version()
-        self.install_from_source_on_agent(version)
+        if skip_controller_install:
+            logger.info(
+                "Skipping controller installation from source"
+                " (--skip-controller-install)"
+            )
+        else:
+            self.install_from_source_on_agent(version)
