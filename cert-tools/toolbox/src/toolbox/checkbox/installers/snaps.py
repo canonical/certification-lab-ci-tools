@@ -88,7 +88,7 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
                 f"{snap.name}.snap",
                 snap.channel,
                 options=["--devmode"],
-                policy=Linear(times=30, delay=10),
+                policy=Linear(times=60, delay=10),
             )
             strict = True
         except SnapInstallError:
@@ -101,7 +101,7 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
                 f"{snap.name}.snap",
                 snap.channel,
                 options=["--classic"],
-                policy=Linear(times=30, delay=10),
+                policy=Linear(times=60, delay=10),
             )
             strict = False
         return strict
