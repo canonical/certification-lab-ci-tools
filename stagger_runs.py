@@ -24,7 +24,8 @@ def main():
     args = parse_args()
     sleeping_s = args.minutes * 60
     sleeping_s = random.randint(0, sleeping_s)
-    if os.getenv("NO_STAGGER"):
+    # lets be flexible here because jenkins may set this envvar to false or 0
+    if os.getenv("NO_STAGGER", "false").lower() in ["1", "true"]:
         print("NO_STAGGER is defined, skipping staggering")
         return
 
