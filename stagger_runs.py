@@ -38,7 +38,7 @@ def main():
     Will now print a spinner to avoid Output Timeout!
     You want to skip this?
     - Restart the job with NO_STAGGER envvar
-    - Kill this process, my pid is: {}
+    - Kill this process, my PID is: {}
     """.format(pretty_deadline, os.getpid())).strip())
     print(flush=True)
 
