@@ -49,7 +49,9 @@ parse_snap_specification() {
 
 get_ubuntu_arch() {
     declare -A arch_map=([x86_64]=amd64 [aarch64]=arm64 [armv7l]=armhf [i686]=i386)
-    UNAME_ARCH=$(_run "uname -m")
+    # retry to absorb transient SSH failures that return empty output (which
+    # would otherwise produce a "bad array subscript" error below)
+    UNAME_ARCH=$(_run_retry "uname -m")
     echo "${arch_map[$UNAME_ARCH]:-$UNAME_ARCH}"
 }
 
