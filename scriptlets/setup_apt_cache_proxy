@@ -44,11 +44,12 @@ fi
 
 echo "Setting up apt-cache proxy (${APT_CACHE_HOST}:3142) on ${DEVICE_IP}..."
 
-# Write proxy config atomically
-if ! _run "sudo tee /etc/apt/apt.conf.d/02proxy >/dev/null <<'EOF'
-Acquire::http::Proxy \"http://${APT_CACHE_HOST}:3142\";
-Acquire::https::Proxy \"DIRECT\";
-EOF"; then
+# Write proxy config
+if ! _run "sudo tee /etc/apt/apt.conf.d/02proxy >/dev/null" <<EOF
+Acquire::http::Proxy "http://${APT_CACHE_HOST}:3142";
+Acquire::https::Proxy "DIRECT";
+EOF
+then
     echo "ERROR: Failed to write proxy config to /etc/apt/apt.conf.d/02proxy on ${DEVICE_IP} — skipping"
     exit 0
 fi
