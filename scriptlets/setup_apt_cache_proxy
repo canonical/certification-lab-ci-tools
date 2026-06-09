@@ -6,8 +6,7 @@
 #
 # Writes /etc/apt/apt.conf.d/02proxy on the remote device to route
 # APT HTTP traffic through cert-apt-cache. HTTPS traffic goes DIRECT.
-# Skips silently on Ubuntu Core (no apt).
-#
+# Skips with a SKIP message on Ubuntu Core (no apt).
 # The cache host defaults to 10.15.22.2 and can be overridden via
 # the APT_CACHE_HOST environment variable.
 #
