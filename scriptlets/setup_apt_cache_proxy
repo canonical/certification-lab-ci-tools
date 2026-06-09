@@ -44,12 +44,6 @@ fi
 
 echo "Setting up apt-cache proxy (${APT_CACHE_HOST}:3142) on ${DEVICE_IP}..."
 
-# Verify cache is reachable
-if ! curl -s --connect-timeout 5 "http://${APT_CACHE_HOST}:3142" >/dev/null; then
-    echo "ERROR: apt-cache (${APT_CACHE_HOST}:3142) is not reachable — skipping proxy setup"
-    exit 0
-fi
-
 # Write HTTP proxy line
 if ! _run "echo 'Acquire::http::Proxy \"http://${APT_CACHE_HOST}:3142\";' | sudo tee /etc/apt/apt.conf.d/02proxy >/dev/null"; then
     echo "ERROR: Failed to write HTTP proxy to /etc/apt/apt.conf.d/02proxy on ${DEVICE_IP} — skipping"
