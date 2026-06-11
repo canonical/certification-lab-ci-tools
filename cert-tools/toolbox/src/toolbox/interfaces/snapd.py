@@ -129,7 +129,14 @@ class SnapdAPIClient(DeviceInterface):
         )
         if not response.stdout:
             raise SnapdAPIError(response.stderr if response.stderr else "No response")
-        header, body = self.parse(response.stdout)
+        try:
+            header, body = self.parse(response.stdout)
+        except ValueError as e:
+            # If an invalid chunk is returned, the function will throw
+            raise SnapdAPIError(
+                f"Invalid reponse header or body. Failed to parse: {response.stdout}"
+                f"\nParsing failed with error: {e}"
+            )
         status = header["status"]
         if status["status-code"] != "200":
             try:
