@@ -1,4 +1,4 @@
-# hwcert-jenkins-tools
+# certification-lab-ci-tools
 
 Utility scripts and tools authored by the Certification Team to enhance and automate CI/CD pipelines.
 
