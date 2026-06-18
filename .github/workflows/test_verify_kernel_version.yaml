@@ -1,0 +1,27 @@
+name: Test verify_kernel_version scriptlet
+on:
+  pull_request:
+    paths:
+      - 'scriptlets/src/**'
+      - 'scriptlets/tests/**'
+      - 'scriptlets/pyproject.toml'
+      - 'scriptlets/tox.ini'
+      - '.github/workflows/test_verify_kernel_version.yaml'
+concurrency:
+  # Cancel inprogress runs if new commit pushed
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test-verify-kernel-version:
+    name: Test the verify_kernel_version scriptlet
+    runs-on: [self-hosted, jammy, x64]
+    defaults:
+      run:
+        working-directory: scriptlets
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - run: pip install tox
+      - run: tox
