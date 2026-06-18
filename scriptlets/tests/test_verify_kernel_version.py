@@ -1,3 +1,4 @@
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -21,7 +22,7 @@ from verify_kernel_version import (
         ("Ubuntu", ""),
     ],
 )
-def test_parse_booted_version(signature, expected):
+def test_parse_booted_version(signature: str, expected: str) -> None:
     assert parse_booted_version(signature) == expected
 
 
@@ -36,8 +37,8 @@ def test_parse_booted_version(signature, expected):
     ],
 )
 def test_booted_expected_kernel(
-    booted_version_flavour, expected_version, expected
-):
+    booted_version_flavour: str, expected_version: str, expected: bool
+) -> None:
     assert (
         booted_expected_kernel(booted_version_flavour, expected_version)
         is expected
@@ -69,14 +70,18 @@ def test_booted_expected_kernel(
     ],
 )
 def test_verify(
-    capsys, signature, expected_version, expected_exit_code, expected_message
-):
+    capsys: pytest.CaptureFixture[str],
+    signature: str,
+    expected_version: str,
+    expected_exit_code: int,
+    expected_message: str,
+) -> None:
     exit_code = verify(signature, expected_version)
     assert exit_code == expected_exit_code
     assert expected_message in capsys.readouterr().out
 
 
-def test_read_version_signature(tmp_path):
+def test_read_version_signature(tmp_path: Path) -> None:
     signature = "Ubuntu 6.8.0-130.130-generic 6.8.12"
     signature_file = tmp_path / "version_signature"
     signature_file.write_text(f"{signature}\n", encoding="utf-8")
@@ -90,7 +95,9 @@ def test_read_version_signature(tmp_path):
         ("Ubuntu 6.8.0-131.131-generic 6.8.12", "6.8.0-130.130", EXIT_FAILURE),
     ],
 )
-def test_main(signature, expected_version, expected_exit_code):
+def test_main(
+    signature: str, expected_version: str, expected_exit_code: int
+) -> None:
     with patch(
         "verify_kernel_version.read_version_signature",
         return_value=signature,

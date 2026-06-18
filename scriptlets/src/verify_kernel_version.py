@@ -10,12 +10,13 @@ so the caller can fail the job.
 
 import argparse
 import sys
+from collections.abc import Sequence
 
 EXIT_OK = 0
 EXIT_FAILURE = 1
 
 
-def parse_booted_version(version_signature):
+def parse_booted_version(version_signature: str) -> str:
     """Return the booted kernel version+flavour from a version signature.
 
     ``/proc/version_signature`` looks like::
@@ -32,7 +33,9 @@ def parse_booted_version(version_signature):
     return fields[1]
 
 
-def booted_expected_kernel(booted_version_flavour, expected_version):
+def booted_expected_kernel(
+    booted_version_flavour: str, expected_version: str
+) -> bool:
     """Return True if the booted kernel matches the expected version.
 
     ``expected_version`` (e.g. ``6.8.0-130.130``) does not include the flavour,
@@ -41,7 +44,7 @@ def booted_expected_kernel(booted_version_flavour, expected_version):
     return booted_version_flavour.startswith(f"{expected_version}-")
 
 
-def verify(version_signature, expected_version):
+def verify(version_signature: str, expected_version: str) -> int:
     """Verify the booted kernel.
 
     Prints human-readable lines describing the outcome as it goes and returns
@@ -72,12 +75,12 @@ def verify(version_signature, expected_version):
     return EXIT_OK
 
 
-def read_version_signature(path="/proc/version_signature"):
+def read_version_signature(path: str = "/proc/version_signature") -> str:
     with open(path, encoding="utf-8") as version_file:
         return version_file.read().strip()
 
 
-def main(argv=None):
+def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "expected_version",
