@@ -1,4 +1,4 @@
-name: Test verify_kernel_version scriptlet
+name: Test scriptlets
 on:
   pull_request:
     paths:
@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   test-verify-kernel-version:
-    name: Test the verify_kernel_version scriptlet
+    name: Test scriptlets
     runs-on: [self-hosted, jammy, x64]
     defaults:
       run:
