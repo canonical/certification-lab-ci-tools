@@ -219,6 +219,22 @@ wait-for-packages-complete = "toolbox.cli.wait_for_packages_complete:main"
 wait-for-snap-changes = "toolbox.cli.wait_for_snap_changes:main"
 install-checkbox-snaps = "toolbox.cli.install_checkbox_snaps:main"
 install-checkbox-debs = "toolbox.cli.install_checkbox_debs:main"
+ensure-kernel = "toolbox.cli.ensure_kernel:main"
+```
+
+### `ensure-kernel`
+
+Verifies that the device under test booted the expected kernel version (e.g.
+after installing a kernel from -proposed). It reads `/proc/version_signature`
+from the device over SSH (using a `LabDevice`, so the `DEVICE_IP`, `DEVICE_USER`
+and `DEVICE_PWD` environment variables configure the connection) and compares
+the booted version against the expected one. It exits with a non-zero status
+when the booted version cannot be determined or does not match, so the caller
+can fail the job.
+
+```bash
+# DEVICE_IP (and optionally DEVICE_USER / DEVICE_PWD) must be set
+ensure-kernel 6.8.0-130.130
 ```
 
 ## Testing locally with `multipass`
