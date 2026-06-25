@@ -7,8 +7,8 @@
 # Writes /etc/apt/apt.conf.d/02proxy on the remote device to route
 # APT HTTP traffic through cert-apt-cache. HTTPS traffic goes DIRECT.
 # Skips with a SKIP message on Ubuntu Core (no apt).
-# The cache host defaults to 10.15.22.2 and can be overridden via
-# the APT_CACHE_HOST environment variable.
+# The cache host defaults to tel-apt-cache.canonical.com and can be overridden
+# via the APT_CACHE_HOST environment variable.
 #
 # The IP of the device is provided by the environment variable DEVICE_IP,
 # which must be set. The user name on the remote device is `ubuntu`
@@ -31,7 +31,7 @@ if [[ "$1" = "-h" || "$1" = "--help" ]]; then
     exit 0
 fi
 
-APT_CACHE_HOST="${APT_CACHE_HOST:-10.15.22.2}"
+APT_CACHE_HOST="${APT_CACHE_HOST:-tel-apt-cache.canonical.com}"
 
 check_for_device_ip || exit 1
 
