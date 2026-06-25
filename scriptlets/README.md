@@ -18,16 +18,3 @@ The unit tests are written in [BATS (Bash automated Testing System)](https://git
 cd tests
 bats .
 ```
-
-### Python scriptlet tests
-
-Some scriptlets are implemented in Python (under `src/`) and tested with
-[pytest](https://docs.pytest.org/), orchestrated by [tox](https://tox.wiki/).
-[uv](https://docs.astral.sh/uv/) is used to provision the environment.
-
-To run the tests:
-
-```bash
-# from the scriptlets directory
-uvx tox
-```
