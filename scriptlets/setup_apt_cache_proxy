@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+
+# Configure a DUT to use the Taipei lab apt-cache proxy.
+#
+# Description:
+#
+# Writes /etc/apt/apt.conf.d/02proxy on the remote device to route
+# APT HTTP traffic through cert-apt-cache. HTTPS traffic goes DIRECT.
+# Skips with a SKIP message on Ubuntu Core (no apt).
+# The cache host defaults to tel-apt-cache.canonical.com and can be overridden
+# via the APT_CACHE_HOST environment variable.
+#
+# The IP of the device is provided by the environment variable DEVICE_IP,
+# which must be set. The user name on the remote device is `ubuntu`
+# by default, unless provided by the environment variable DEVICE_USER.
+#
+# Usage:
+#   DEVICE_IP=<dut-ip> setup_apt_cache_proxy
+#   APT_CACHE_HOST=<host> DEVICE_IP=<dut-ip> setup_apt_cache_proxy
+#
+# Return value:
+#   0 on success or graceful skip, 1 on usage errors.
+
+usage() {
+    echo "Usage: DEVICE_IP=<dut-ip> $(basename ${BASH_SOURCE[0]})"
+    echo "       APT_CACHE_HOST=<host> DEVICE_IP=<dut-ip> $(basename ${BASH_SOURCE[0]})"
+}
+
+if [[ "$1" = "-h" || "$1" = "--help" ]]; then
+    usage
+    exit 0
+fi
+
+APT_CACHE_HOST="${APT_CACHE_HOST:-tel-apt-cache.canonical.com}"
+
+check_for_device_ip || exit 1
+
+# Skip Ubuntu Core — no apt, no proxy config needed
+OS_ID=$(_run cat /etc/os-release 2>/dev/null | grep '^ID=' | cut -d= -f2)
+if [[ "$OS_ID" == "ubuntu-core" ]]; then
+    echo "SKIP: Ubuntu Core detected on ${DEVICE_IP}, no apt proxy needed"
+    exit 0
+fi
+
+echo "Setting up apt-cache proxy (${APT_CACHE_HOST}:3142) on ${DEVICE_IP}..."
+
+# Write proxy config
+if ! _run "sudo tee /etc/apt/apt.conf.d/02proxy >/dev/null" <<EOF
+Acquire::http::Proxy "http://${APT_CACHE_HOST}:3142";
+Acquire::https::Proxy "DIRECT";
+EOF
+then
+    echo "ERROR: Failed to write proxy config to /etc/apt/apt.conf.d/02proxy on ${DEVICE_IP} — skipping"
+    exit 0
+fi
+
+echo "Done."
