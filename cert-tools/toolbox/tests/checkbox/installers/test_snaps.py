@@ -653,58 +653,57 @@ class TestCheckboxSnapsInstaller:
         assert ["sudo", "snap", "set", "checkbox", "slave=enabled"] in calls
         assert ["sudo", "snap", "start", "--enable", "checkbox"] in calls
 
-    # XXX: test disabled because custom_frontend_interface path is currently broken
-    # def test_restart_new_interface(self, mocker):
-    #     """Test restart with new providers interface configures runtime as agent."""
-    #     device = TrivialDevice(
-    #         interfaces=[
-    #             SnapdAPIClient(),
-    #             RebootInterface(),
-    #             SystemStatusInterface(),
-    #             SnapInterface(),
-    #         ]
-    #     )
-    #     device.run = mocker.Mock(return_value=Result(stdout="", exited=0))
-    #
-    #     mocker.patch.object(
-    #         device.interfaces[SnapdAPIClient],
-    #         "get",
-    #         side_effect=[
-    #             {"architecture": "amd64", "store": None},
-    #             [{"store": "branded"}],
-    #         ],
-    #     )
-    #
-    #     runtime = SnapSpecifier(
-    #         name="checkbox22", channel=Channel.from_string("latest/stable")
-    #     )
-    #     mocker.patch(
-    #         "toolbox.checkbox.installers.snaps.CheckboxRuntimeHelper"
-    #     ).return_value.determine_checkbox_runtime.return_value = runtime
-    #
-    #     mock_install = mocker.patch.object(device.interfaces[SnapInterface], "install")
-    #
-    #     frontends = [
-    #         SnapSpecifier(name="checkbox", channel=Channel.from_string("22/stable"))
-    #     ]
-    #     installer = CheckboxSnapsInstaller(
-    #         device, TrivialDevice(), frontends, mocker.Mock()
-    #     )
-    #
-    #     mocker.patch.object(installer, "custom_frontend_interface", return_value=True)
-    #     mock_configure_agent = mocker.patch.object(installer, "configure_agent")
-    #
-    #     installer.restart()
-    #
-    #     # Should refresh runtime with devmode
-    #     mock_install.assert_called_once_with(
-    #         "checkbox22",
-    #         Channel.from_string("latest/stable"),
-    #         options=["--devmode"],
-    #         policy=mocker.ANY,
-    #     )
-    #     # Should configure runtime as agent for new interface
-    #     mock_configure_agent.assert_called_once_with(runtime)
+    def test_restart_new_interface(self, mocker):
+        """Test restart with new providers interface configures runtime as agent."""
+        device = TrivialDevice(
+            interfaces=[
+                SnapdAPIClient(),
+                RebootInterface(),
+                SystemStatusInterface(),
+                SnapInterface(),
+            ]
+        )
+        device.run = mocker.Mock(return_value=Result(stdout="", exited=0))
+
+        mocker.patch.object(
+            device.interfaces[SnapdAPIClient],
+            "get",
+            side_effect=[
+                {"architecture": "amd64", "store": None},
+                [{"store": "branded"}],
+            ],
+        )
+
+        runtime = SnapSpecifier(
+            name="checkbox22", channel=Channel.from_string("latest/stable")
+        )
+        mocker.patch(
+            "toolbox.checkbox.installers.snaps.CheckboxRuntimeHelper"
+        ).return_value.determine_checkbox_runtime.return_value = runtime
+
+        mock_install = mocker.patch.object(device.interfaces[SnapInterface], "install")
+
+        frontends = [
+            SnapSpecifier(name="checkbox", channel=Channel.from_string("22/stable"))
+        ]
+        installer = CheckboxSnapsInstaller(
+            device, TrivialDevice(), frontends, mocker.Mock()
+        )
+
+        mocker.patch.object(installer, "custom_frontend_interface", return_value=True)
+        mock_configure_agent = mocker.patch.object(installer, "configure_agent")
+
+        installer.restart()
+
+        # Should refresh runtime with devmode
+        mock_install.assert_called_once_with(
+            "checkbox22",
+            Channel.from_string("latest/stable"),
+            options=["--devmode"],
+            policy=mocker.ANY,
+        )
+        # Should configure runtime as agent for new interface
+        mock_configure_agent.assert_called_once_with(runtime)
 
     def test_restart_legacy_interface(self, mocker):
         """Test restart with legacy interface configures frontend as agent."""
