@@ -39,7 +39,8 @@ check_for_device_ip || exit 1
 OS_ID=$(_run '. /etc/os-release 2>/dev/null && echo "$ID"')
 _RUN_RC=$?
 if [[ $_RUN_RC -ne 0 ]]; then
-    echo "WARNING: Failed to detect OS on ${DEVICE_IP} (exit code: ${_RUN_RC}) — continuing with proxy setup"
+    echo "SKIP: Failed to detect OS on ${DEVICE_IP} (exit code: ${_RUN_RC}) — no apt proxy configured"
+    exit 0
 elif [[ "$OS_ID" == "ubuntu-core" ]]; then
     echo "SKIP: Ubuntu Core detected on ${DEVICE_IP}, no apt proxy needed"
     exit 0
