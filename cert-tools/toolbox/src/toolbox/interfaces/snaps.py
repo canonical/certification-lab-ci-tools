@@ -10,7 +10,6 @@ from toolbox.interfaces.status import SystemStatusInterface
 from toolbox.results import BooleanResult
 from toolbox.retries import retry, RetryPolicy
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -26,11 +25,41 @@ class SnapNotFoundError(SnapInstallError):
     pass
 
 
+class SnapSpec:
+    def __init__(self, name, risk, track, branch):
+        self.name = name
+        self.risk = risk
+        self.track = track
+        self.branch = branch
+
+    @classmethod
+    def from_snapd_snaps(cls, snap_response: dict):
+        name = snap_response["name"]
+        tracking_channel = snap_response["tracking-channel"]
+        track, risk, *branch = tracking_channel.split("/", maxsplit=3)
+        branch = branch[0] if branch else None
+        return cls(name, risk=risk, track=track, branch=branch)
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__} ({self.name} {self.channel})>"
+
+    @property
+    def channel(self):
+        branch_repr = "/" + self.branch if self.branch else ""
+        return f"{self.track}/{self.risk}{branch_repr}"
+
+
 class SnapInterface(
     DeviceInterface,
     requires=(RebootInterface, SnapdAPIClient, SystemStatusInterface),
 ):
     """Provides snap package management capabilities."""
+
+    def list(self) -> list:
+        return [
+            SnapSpec.from_snapd_snaps(snap)
+            for snap in self.device.interfaces[SnapdAPIClient].get("snaps")
+        ]
 
     def get_active(self, snap: str | None = None) -> dict:
         """Get active snap(s) from the device."""
@@ -47,7 +76,9 @@ class SnapInterface(
 
     def get_change(self, id: str) -> dict:
         """Get a specific snap change by ID."""
-        return self.device.interfaces[SnapdAPIClient].get(endpoint=f"changes/{id}")
+        return self.device.interfaces[SnapdAPIClient].get(
+            endpoint=f"changes/{id}"
+        )
 
     def check_snap_changes_complete(self) -> BooleanResult:
         """Check if all snap changes are in a "ready" state."""
@@ -62,10 +93,13 @@ class SnapInterface(
         logger.info("Snap operations are ongoing")
         ongoing_changes = [change for change in changes if not change["ready"]]
         for change in ongoing_changes:
-            logger.info(f"{change['id']} {change['status']}: {change['summary']}")
+            logger.info(
+                f"{change['id']} {change['status']}: {change['summary']}"
+            )
         return BooleanResult(
             False,
-            "Changes: " + ", ".join(sorted(change["id"] for change in ongoing_changes)),
+            "Changes: "
+            + ", ".join(sorted(change["id"] for change in ongoing_changes)),
         )
 
     def check_snap_changes_complete_and_reboot(
@@ -77,7 +111,9 @@ class SnapInterface(
             not complete
             and self.device.interfaces[RebootInterface].is_reboot_required()
         ):
-            logger.info("Manually rebooting to complete waiting snap changes...")
+            logger.info(
+                "Manually rebooting to complete waiting snap changes..."
+            )
             self.device.interfaces[RebootInterface].reboot()
             self.device.interfaces[SystemStatusInterface].wait_for_status(
                 allowed={"degraded"}, policy=status_policy
@@ -92,7 +128,8 @@ class SnapInterface(
     ) -> BooleanResult:
         """Wait for snap changes to complete, retrying with the given policy."""
         check_snap_changes = partial(
-            self.check_snap_changes_complete_and_reboot, status_policy=status_policy
+            self.check_snap_changes_complete_and_reboot,
+            status_policy=status_policy,
         )
         check_snap_changes.__name__ = (
             self.check_snap_changes_complete_and_reboot.__name__
@@ -115,7 +152,9 @@ class SnapInterface(
         an auto-refresh in the background may cause the device to reboot,
         and this approach protects against that.
         """
-        action = "refresh" if self.get_active(snap) and refresh_ok else "install"
+        action = (
+            "refresh" if self.get_active(snap) and refresh_ok else "install"
+        )
         command = ["sudo", "snap", action, "--no-wait", snap]
         if channel:
             command.append(f"--channel={channel}")
@@ -128,7 +167,9 @@ class SnapInterface(
                 if "not found" in install_result.stderr
                 else SnapInstallError
             )
-            raise error_cls(f"Failed to run '{command}': {install_result.stderr}")
+            raise error_cls(
+                f"Failed to run '{command}': {install_result.stderr}"
+            )
         snap_change_id = install_result.stdout.strip()
         if not snap_change_id:
             return
