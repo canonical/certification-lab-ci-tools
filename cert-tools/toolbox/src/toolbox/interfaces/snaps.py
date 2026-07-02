@@ -3,13 +3,13 @@
 from functools import partial
 import logging
 
+from toolbox.entities.snaps import SnapSpecifier
 from toolbox.interfaces import DeviceInterface
 from toolbox.interfaces.reboot import RebootInterface
 from toolbox.interfaces.snapd import SnapdAPIClient, SnapdAPIError
 from toolbox.interfaces.status import SystemStatusInterface
 from toolbox.results import BooleanResult
 from toolbox.retries import retry, RetryPolicy
-
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +31,12 @@ class SnapInterface(
     requires=(RebootInterface, SnapdAPIClient, SystemStatusInterface),
 ):
     """Provides snap package management capabilities."""
+
+    def get_list(self) -> list[SnapSpecifier]:
+        return [
+            SnapSpecifier.from_snapd_snaps(snap)
+            for snap in self.device.interfaces[SnapdAPIClient].get("snaps")
+        ]
 
     def get_active(self, snap: str | None = None) -> dict:
         """Get active snap(s) from the device."""
@@ -92,7 +98,8 @@ class SnapInterface(
     ) -> BooleanResult:
         """Wait for snap changes to complete, retrying with the given policy."""
         check_snap_changes = partial(
-            self.check_snap_changes_complete_and_reboot, status_policy=status_policy
+            self.check_snap_changes_complete_and_reboot,
+            status_policy=status_policy,
         )
         check_snap_changes.__name__ = (
             self.check_snap_changes_complete_and_reboot.__name__
