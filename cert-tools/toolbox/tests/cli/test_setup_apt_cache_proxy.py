@@ -15,6 +15,7 @@ from toolbox.cli.setup_apt_cache_proxy import (
 # generate_proxy_config
 # ---------------------------------------------------------------------------
 
+
 def test_generate_proxy_config_default():
     config = generate_proxy_config("tel-apt-cache.canonical.com")
     assert 'Acquire::http::Proxy "http://tel-apt-cache.canonical.com:3142";' in config
@@ -36,6 +37,7 @@ def test_generate_proxy_config_produces_two_lines():
 # is_ubuntu_core
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.parametrize(
     "os_id, expected",
     [
@@ -53,6 +55,7 @@ def test_is_ubuntu_core(os_id, expected):
 # ---------------------------------------------------------------------------
 # main — helpers
 # ---------------------------------------------------------------------------
+
 
 def _patch_device(mocker, os_result, write_result=None):
     """Patch LabDevice so that device.run returns controlled results.
@@ -73,6 +76,7 @@ def _patch_device(mocker, os_result, write_result=None):
 # ---------------------------------------------------------------------------
 # main — success path
 # ---------------------------------------------------------------------------
+
 
 def test_main_success(mocker, capsys):
     os_result = Result(stdout="ubuntu\n", exited=0)
@@ -102,6 +106,7 @@ def test_main_uses_custom_cache_host_from_env(mocker, capsys, monkeypatch):
 # main — Ubuntu Core skip
 # ---------------------------------------------------------------------------
 
+
 def test_main_ubuntu_core_skips(mocker, capsys):
     os_result = Result(stdout="ubuntu-core\n", exited=0)
     _patch_device(mocker, os_result)
@@ -117,6 +122,7 @@ def test_main_ubuntu_core_skips(mocker, capsys):
 # ---------------------------------------------------------------------------
 # main — OS detection failure skip
 # ---------------------------------------------------------------------------
+
 
 def test_main_os_detection_failure_skips(mocker, capsys):
     os_result = Result(stdout="", exited=255, stderr="Connection refused\n")
@@ -135,9 +141,12 @@ def test_main_os_detection_failure_skips(mocker, capsys):
 # main — write failure skip
 # ---------------------------------------------------------------------------
 
+
 def test_main_write_failure_skips(mocker, capsys):
     os_result = Result(stdout="ubuntu\n", exited=0)
-    write_result = Result(stdout="something went wrong\n", exited=1, stderr="Permission denied\n")
+    write_result = Result(
+        stdout="something went wrong\n", exited=1, stderr="Permission denied\n"
+    )
     _patch_device(mocker, os_result, write_result)
 
     with pytest.raises(SystemExit) as exc_info:
@@ -151,6 +160,7 @@ def test_main_write_failure_skips(mocker, capsys):
 # ---------------------------------------------------------------------------
 # main — no DEVICE_IP
 # ---------------------------------------------------------------------------
+
 
 def test_main_no_device_ip_exits_nonzero(mocker, capsys, monkeypatch):
     monkeypatch.delenv("DEVICE_IP", raising=False)
