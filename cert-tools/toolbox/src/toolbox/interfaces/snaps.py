@@ -55,7 +55,7 @@ class SnapInterface(
 ):
     """Provides snap package management capabilities."""
 
-    def list(self) -> list:
+    def get_list(self) -> list[SnapSpec]:
         return [
             SnapSpec.from_snapd_snaps(snap)
             for snap in self.device.interfaces[SnapdAPIClient].get("snaps")

@@ -25,7 +25,7 @@ class TestEnsureStableSnaps:
             SnapSpec("core", "latest", "stable", None),
             SnapSpec("core22", "latest", "stable", None),
         ]
-        snap_interface.list.return_value = snaps
+        snap_interface.get_list.return_value = snaps
 
         ensure_stable_snaps.main()
 
@@ -40,7 +40,7 @@ class TestEnsureStableSnaps:
             SnapSpec("core", "latest", "stable", None),
             SnapSpec("core22", "latest", "stable", None),
         ]
-        snap_interface.list.return_value = snaps
+        snap_interface.get_list.return_value = snaps
         failing_first = {"checkbox22", "core22"}
         attempts = Counter()
 
@@ -61,7 +61,7 @@ class TestEnsureStableSnaps:
             SnapSpec("checkbox22", "latest", "stable", None),
             SnapSpec("core", "latest", "stable", None),
         ]
-        snap_interface.list.return_value = snaps
+        snap_interface.get_list.return_value = snaps
         attempts = Counter()
 
         def install(name, channel, **kwargs):

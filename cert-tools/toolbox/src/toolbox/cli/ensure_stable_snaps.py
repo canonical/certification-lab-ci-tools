@@ -29,7 +29,7 @@ def main():
         ]
     )
     print("Refreshing all installed snaps to stable")
-    installed_snaps = ld.interfaces[SnapInterface].list()
+    installed_snaps = ld.interfaces[SnapInterface].get_list()
     refresh_failed = []
     for snap in installed_snaps:
         snap.risk = "stable"
