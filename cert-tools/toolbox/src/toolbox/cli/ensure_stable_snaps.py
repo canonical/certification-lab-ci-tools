@@ -32,7 +32,7 @@ def main():
     installed_snaps = ld.interfaces[SnapInterface].get_list()
     refresh_failed = []
     for snap in installed_snaps:
-        snap.risk = "stable"
+        snap.channel.risk = "stable"
         # ingore refresh errors as there may be dependencies between refreshes
         # that aren't trivial to fix right away, for now refresh as much as we
         # can
@@ -40,7 +40,7 @@ def main():
             print(f"Refreshing '{snap.name}' to '{snap.channel}'")
             ld.interfaces[SnapInterface].install(
                 snap.name,
-                snap.channel,
+                str(snap.channel),
                 refresh_ok=True,
                 policy=Linear(times=3, delay=60),
             )
@@ -55,7 +55,7 @@ def main():
         try:
             ld.interfaces[SnapInterface].install(
                 to_refresh.name,
-                to_refresh.channel,
+                str(to_refresh.channel),
                 refresh_ok=True,
                 policy=Linear(times=3, delay=600),
             )

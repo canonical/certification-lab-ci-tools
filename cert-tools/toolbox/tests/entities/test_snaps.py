@@ -75,6 +75,27 @@ class TestSnapSpecifierFromString:
             SnapSpecifier.from_string(invalid_string)
 
 
+class TestSnapSpecifierFromSnapdSnaps:
+    """Tests for SnapSpecifier.from_snapd_snaps() method."""
+
+    @pytest.mark.parametrize(
+        "tracking_channel,expected_channel_str",
+        [
+            ("latest/stable", "latest/stable"),
+            ("22/candidate", "22/candidate"),
+            ("latest/stable/hotfix", "latest/stable/hotfix"),
+            ("stable", "stable"),
+        ],
+    )
+    def test_from_snapd_snaps(self, tracking_channel, expected_channel_str):
+        """Test building a snap specifier from a snapd snap response."""
+        snap = SnapSpecifier.from_snapd_snaps(
+            {"name": "checkbox", "tracking-channel": tracking_channel}
+        )
+        assert snap.name == "checkbox"
+        assert str(snap.channel) == expected_channel_str
+
+
 class TestSnapSpecifierStringRepresentation:
     """Tests for SnapSpecifier.__str__() method."""
 

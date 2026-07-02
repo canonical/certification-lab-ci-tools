@@ -3,6 +3,7 @@
 from functools import partial
 import logging
 
+from toolbox.entities.snaps import SnapSpecifier
 from toolbox.interfaces import DeviceInterface
 from toolbox.interfaces.reboot import RebootInterface
 from toolbox.interfaces.snapd import SnapdAPIClient, SnapdAPIError
@@ -25,39 +26,15 @@ class SnapNotFoundError(SnapInstallError):
     pass
 
 
-class SnapSpec:
-    def __init__(self, name, risk, track, branch):
-        self.name = name
-        self.risk = risk
-        self.track = track
-        self.branch = branch
-
-    @classmethod
-    def from_snapd_snaps(cls, snap_response: dict):
-        name = snap_response["name"]
-        tracking_channel = snap_response["tracking-channel"]
-        track, risk, *branch = tracking_channel.split("/", maxsplit=3)
-        branch = branch[0] if branch else None
-        return cls(name, risk=risk, track=track, branch=branch)
-
-    def __repr__(self):
-        return f"<{self.__class__.__name__} ({self.name} {self.channel})>"
-
-    @property
-    def channel(self):
-        branch_repr = "/" + self.branch if self.branch else ""
-        return f"{self.track}/{self.risk}{branch_repr}"
-
-
 class SnapInterface(
     DeviceInterface,
     requires=(RebootInterface, SnapdAPIClient, SystemStatusInterface),
 ):
     """Provides snap package management capabilities."""
 
-    def get_list(self) -> list[SnapSpec]:
+    def get_list(self) -> list[SnapSpecifier]:
         return [
-            SnapSpec.from_snapd_snaps(snap)
+            SnapSpecifier.from_snapd_snaps(snap)
             for snap in self.device.interfaces[SnapdAPIClient].get("snaps")
         ]
 

@@ -4,7 +4,9 @@ from collections import Counter
 import pytest
 
 from toolbox.cli import ensure_stable_snaps
-from toolbox.interfaces.snaps import SnapInstallError, SnapSpec
+from toolbox.entities.channels import Channel
+from toolbox.entities.snaps import SnapSpecifier
+from toolbox.interfaces.snaps import SnapInstallError
 
 
 @pytest.fixture
@@ -21,9 +23,12 @@ class TestEnsureStableSnaps:
     def test_all_snaps_refresh_first_try(self, snap_interface):
         """All snaps refresh on the first attempt, so main() exits cleanly."""
         snaps = [
-            SnapSpec("checkbox22", "latest", "beta", None),
-            SnapSpec("core", "latest", "stable", None),
-            SnapSpec("core22", "latest", "stable", "security_branch_123"),
+            SnapSpecifier("checkbox22", Channel(track="latest", risk="beta")),
+            SnapSpecifier("core", Channel(track="latest", risk="stable")),
+            SnapSpecifier(
+                "core22",
+                Channel(track="latest", risk="stable", branch="security_branch_123"),
+            ),
         ]
         snap_interface.get_list.return_value = snaps
 
@@ -31,14 +36,14 @@ class TestEnsureStableSnaps:
 
         assert snap_interface.install.call_count == len(snaps)
         for snap in snaps:
-            assert snap.risk == "stable"
+            assert snap.channel.risk == "stable"
 
     def test_two_snaps_refresh_on_retry(self, snap_interface):
         """Two snaps fail on the first try but succeed when retried."""
         snaps = [
-            SnapSpec("checkbox22", "latest", "stable", None),
-            SnapSpec("core", "latest", "stable", None),
-            SnapSpec("core22", "latest", "stable", None),
+            SnapSpecifier("checkbox22", Channel(track="latest", risk="stable")),
+            SnapSpecifier("core", Channel(track="latest", risk="stable")),
+            SnapSpecifier("core22", Channel(track="latest", risk="stable")),
         ]
         snap_interface.get_list.return_value = snaps
         failing_first = {"checkbox22", "core22"}
@@ -58,8 +63,8 @@ class TestEnsureStableSnaps:
     def test_one_snap_never_refreshes_raises_systemexit(self, snap_interface):
         """A snap that never refreshes exhausts retries and raises SystemExit."""
         snaps = [
-            SnapSpec("checkbox22", "latest", "stable", None),
-            SnapSpec("core", "latest", "stable", None),
+            SnapSpecifier("checkbox22", Channel(track="latest", risk="stable")),
+            SnapSpecifier("core", Channel(track="latest", risk="stable")),
         ]
         snap_interface.get_list.return_value = snaps
         attempts = Counter()
