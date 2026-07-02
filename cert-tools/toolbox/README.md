@@ -198,7 +198,7 @@ device = LabDevice(
 installer = CheckboxSnapsInstaller(
     device=device,
     agent=LocalHost(),
-    frontends=[SnapSpecifier.from_string("checkbox-zapper=uc24/beta")],
+    frontends=[SnapSpecifier.from_string("checkbox-private-frontend=uc24/beta")],
     snapstore=SnapstoreClient(create_base_client(TOKEN_ENVIRONMENT_VARIABLE))
 )
 # this will also install Checkbox on the agent, from source
