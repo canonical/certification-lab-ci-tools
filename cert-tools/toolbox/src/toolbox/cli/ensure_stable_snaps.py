@@ -1,4 +1,4 @@
-from contextlib import suppress
+from argparse import ArgumentParser
 
 from toolbox.devices.lab import LabDevice
 from toolbox.interfaces.reboot import RebootInterface
@@ -11,6 +11,15 @@ MAX_RETRY = 3
 
 
 def main():
+    parser = ArgumentParser(
+        description="Refresh all installed snaps on a lab device to stable.",
+        epilog=(
+            "This script uses the DEVICE_IP and DEVICE_USER environment "
+            "variables to connect to the lab device."
+        ),
+    )
+    parser.parse_args()
+
     ld = LabDevice(
         interfaces=[
             SystemStatusInterface(),
@@ -39,10 +48,10 @@ def main():
             refresh_failed.append(snap)
             print(f"Snap '{snap.name}' failed to refresh, retrying at the end")
 
-    retry = MAX_RETRY
-    while refresh_failed and retry > 0:
+    retries = {snap.name: MAX_RETRY for snap in refresh_failed}
+    while refresh_failed:
         to_refresh = refresh_failed.pop(0)
-        print("Retrying to refresh snap: {to_refresh.name}")
+        print(f"Retrying to refresh snap: {to_refresh.name}")
         try:
             ld.interfaces[SnapInterface].install(
                 to_refresh.name,
@@ -50,11 +59,17 @@ def main():
                 refresh_ok=True,
                 policy=Linear(times=3, delay=600),
             )
-            retry = MAX_RETRY
         except SnapInstallError:
-            print("Failed to refresh snap: {to_refresh.name}")
-            refresh_failed.append(snap)
-            retry -= 1
+            print(f"Failed to refresh snap: {to_refresh.name}")
+            refresh_failed.append(to_refresh)
+            retries[to_refresh.name] -= 1
+            if retries[to_refresh.name] == 0:
+                break
+    if refresh_failed:
+        raise SystemExit(
+            "Failed to refresh to stable the following snaps:\n-"
+            + "\n-".join(snap.name for snap in refresh_failed)
+        )
 
 
 if __name__ == "__main__":
