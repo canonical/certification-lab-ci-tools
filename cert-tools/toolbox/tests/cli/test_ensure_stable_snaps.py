@@ -23,7 +23,7 @@ class TestEnsureStableSnaps:
         snaps = [
             SnapSpec("checkbox22", "latest", "beta", None),
             SnapSpec("core", "latest", "stable", None),
-            SnapSpec("core22", "latest", "stable", None),
+            SnapSpec("core22", "latest", "stable", "security_branch_123"),
         ]
         snap_interface.get_list.return_value = snaps
 
