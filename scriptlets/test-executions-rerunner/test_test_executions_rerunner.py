@@ -292,3 +292,31 @@ def test_end_to_end(request, rerunner_name, expected_successful):
         for submit_matcher in submit_matchers
     )
     assert delete_matcher.called_once
+
+
+def test_test_observer_interface_no_auth_headers():
+    interface = TestObserverInterface()
+    assert interface.create_auth_headers() == {}
+
+
+def test_test_observer_interface_get_sends_auth_header():
+    interface = TestObserverInterface(api_token="mytoken")
+    with requests_mock.Mocker() as mocker:
+        matcher = mocker.get(
+            interface.reruns_endpoint,
+            request_headers={"Authorization": "Bearer mytoken"},
+            json=[],
+        )
+        interface.get()
+    assert matcher.called_once
+
+
+def test_test_observer_interface_delete_sends_auth_header():
+    interface = TestObserverInterface(api_token="mytoken")
+    with requests_mock.Mocker() as mocker:
+        matcher = mocker.delete(
+            interface.reruns_endpoint,
+            request_headers={"Authorization": "Bearer mytoken"},
+        )
+        interface.delete([1, 2])
+    assert matcher.called_once

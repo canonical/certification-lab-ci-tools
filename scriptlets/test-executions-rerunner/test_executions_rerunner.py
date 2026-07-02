@@ -44,7 +44,8 @@ class TestObserverInterface:
     def __init__(
         self,
         family: Optional[str] = None,
-        limit: Optional[int] = None
+        limit: Optional[int] = None,
+        api_token: Optional[str] = None,
     ):
         # at the moment there is a single Test Observer deployment but
         # the rerun endpoint could be a constructor argument in the future
@@ -54,6 +55,17 @@ class TestObserverInterface:
         )
         self.family = family
         self.limit = limit
+        self.api_token = api_token
+
+    def create_auth_headers(self) -> Dict:
+        """
+        Create the authorization headers for Test Observer API requests.
+
+        :return: a dict with auth header if api_token is set, otherwise an empty dict
+        """
+        if self.api_token:
+            return {"Authorization": f"Bearer {self.api_token}"}
+        return {}
 
     def create_get_params(self) -> Dict:
         """
@@ -74,7 +86,9 @@ class TestObserverInterface:
         Raises an HTTPError if the operation fails.
         """
         response = requests.get(
-            self.reruns_endpoint, params=self.create_get_params()
+            self.reruns_endpoint,
+            params=self.create_get_params(),
+            headers=self.create_auth_headers(),
         )
         response.raise_for_status()
         return response.json()
@@ -88,7 +102,8 @@ class TestObserverInterface:
         """
         response = requests.delete(
             self.reruns_endpoint,
-            json={"test_execution_ids": test_execution_ids}
+            json={"test_execution_ids": test_execution_ids},
+            headers=self.create_auth_headers(),
         )
         response.raise_for_status()
 
@@ -421,7 +436,9 @@ def create_rerunner_from_args():
 
     return Rerunner(
         interface=TestObserverInterface(
-            family=args.family, limit=args.limit
+            family=args.family,
+            limit=args.limit,
+            api_token=environ.get("TEST_OBSERVER_API_KEY"),
         ),
         processor=processor
     )
