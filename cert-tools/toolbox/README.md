@@ -219,6 +219,25 @@ wait-for-packages-complete = "toolbox.cli.wait_for_packages_complete:main"
 wait-for-snap-changes = "toolbox.cli.wait_for_snap_changes:main"
 install-checkbox-snaps = "toolbox.cli.install_checkbox_snaps:main"
 install-checkbox-debs = "toolbox.cli.install_checkbox_debs:main"
+setup_apt_cache_proxy = "toolbox.cli.setup_apt_cache_proxy:main"
+```
+
+### `setup_apt_cache_proxy`
+
+Configures the device under test to route APT HTTP traffic through the
+lab apt-cache proxy (default: `tel-apt-cache.canonical.com:3142`) while
+keeping HTTPS traffic `DIRECT`. Ubuntu Core devices are skipped (no apt).
+All error paths exit 0 with a descriptive SKIP/ERROR message so that SRU
+tests are not aborted. The `DEVICE_IP` (and optionally `DEVICE_USER` /
+`DEVICE_PWD`) environment variables configure the SSH connection. The
+`APT_CACHE_HOST` environment variable can override the default cache host.
+
+```bash
+# DEVICE_IP (and optionally DEVICE_USER / DEVICE_PWD) must be set
+DEVICE_IP=<dut-ip> setup_apt_cache_proxy
+
+# Custom cache host
+APT_CACHE_HOST=<host> DEVICE_IP=<dut-ip> setup_apt_cache_proxy
 ```
 
 ## Testing locally with `multipass`
