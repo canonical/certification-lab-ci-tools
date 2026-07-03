@@ -20,7 +20,7 @@ class Channel:
     def from_string(cls, channel: str) -> "Channel":
         # template for matching snap channels in the form track/risk/branch
         # (only one of track or risk is required)
-        channel_template = r"^(?:([\w.-]+)(?:/([\w-]+)(?:/([\w-]+))?)?)?$"
+        channel_template = r"^(?:([\w.-]+)(?:/([\w-]+)(?:/([\w\-\.]+))?)?)?$"
         match = re.match(channel_template, channel)
         if not match:
             raise ValueError(f"Cannot parse '{channel}' as a snap channel")

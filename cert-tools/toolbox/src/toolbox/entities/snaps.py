@@ -23,5 +23,11 @@ class SnapSpecifier(NamedTuple):
             ) from error
         return cls(name=name, channel=channel)
 
+    @classmethod
+    def from_snapd_snaps(cls, snap_response: dict) -> "SnapSpecifier":
+        name = snap_response["name"]
+        channel = Channel.from_string(snap_response["tracking-channel"])
+        return cls(name=name, channel=channel)
+
     def __str__(self) -> str:
         return f"{self.name}={self.channel}"
