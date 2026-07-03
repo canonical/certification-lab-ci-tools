@@ -5,7 +5,7 @@ from invoke import Result
 
 from toolbox.cli import ensure_kernel
 from toolbox.cli.ensure_kernel import (
-    booted_expected_kernel,
+    normalize_version,
     main,
     parse_booted_version,
 )
@@ -28,13 +28,14 @@ def test_parse_booted_version(signature, expected):
     [
         ("6.8.0-130.130-generic", "6.8.0-130.130", True),
         ("6.8.0-131.131-generic", "6.8.0-130.130", False),
-        # "6.8.0-130.13" must not match "6.8.0-130.130-generic": the trailing
-        # dash in the expected prefix guards against partial-number matches.
-        ("6.8.0-130.130-generic", "6.8.0-130.13", False),
+        # regression: metapackage may have 5 . separated digits, fith one doesn't matter
+        ("5.15.0-186.196-generic", "5.15.0.186.166", True),
     ],
 )
 def test_booted_expected_kernel(booted_version_flavour, expected_version, expected):
-    assert booted_expected_kernel(booted_version_flavour, expected_version) is expected
+    assert (
+        normalize_version(booted_version_flavour) == normalize_version(expected_version)
+    ) == expected
 
 
 def _patch_device(mocker, result):
