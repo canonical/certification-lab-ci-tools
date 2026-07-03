@@ -30,13 +30,12 @@ def parse_booted_version(version_signature: str) -> str:
     return fields[1]
 
 
-def booted_expected_kernel(booted_version_flavour: str, expected_version: str) -> bool:
-    """Return True if the booted kernel matches the expected version.
-
-    ``expected_version`` (e.g. ``6.8.0-130.130``) does not include the flavour,
-    so the booted version+flavour must start with ``<expected_version>-``.
+def normalize_version(version: str) -> str:
     """
-    return booted_version_flavour.startswith(f"{expected_version}-")
+    Normalize both versions so that they are comparable
+    """
+    version = version.replace("-", ".").replace("_", ".")
+    return ".".join(version.split(".")[:4])
 
 
 def main():
@@ -59,27 +58,28 @@ def main():
         sys.exit(1)
 
     version_signature = result.stdout.strip()
-    booted_version_flavour = parse_booted_version(version_signature)
+    booted_version_flavour = normalize_version(parse_booted_version(version_signature))
+    expected_version = normalize_version(args.expected_version)
     print("Kernel verification (active kernel):")
-    print(f"  version_signature : {version_signature}")
-    print(f"  booted version    : {booted_version_flavour}")
-    print(f"  expected version  : {args.expected_version}")
+    print(f"  version_signature             : {version_signature}")
+    print(f"  booted version   (normalized) : {booted_version_flavour}")
+    print(f"  expected version (normalized) : {expected_version}")
     if not booted_version_flavour:
         print(
             "ERROR: could not determine the booted kernel version from "
             f"{VERSION_SIGNATURE_PATH}"
         )
         sys.exit(1)
-    if not booted_expected_kernel(booted_version_flavour, args.expected_version):
+    if booted_version_flavour != expected_version:
         print(
-            f"ERROR: booted kernel version {booted_version_flavour} does not "
-            f"match the expected version {args.expected_version}; the device "
+            f"ERROR: booted kernel version ({booted_version_flavour}) does not "
+            f"match the expected version ({expected_version}); the device "
             "did not boot the expected kernel"
         )
         sys.exit(1)
     print(
         "Kernel verification OK: device booted expected kernel "
-        f"{args.expected_version} ({booted_version_flavour})"
+        f"{expected_version} ({booted_version_flavour})"
     )
 
 
