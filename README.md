@@ -8,7 +8,7 @@ Certification tasks that need to make use of the tools in this repo can use the 
 
 ```bash
 export TOOLS_PATH=tools
-curl -Ls -o install_tools.sh https://raw.githubusercontent.com/canonical/certification-lab-ci-tools/refs/heads/main/install_tools.sh
+curl -Ls --fail --retry 5 --retry-delay 5 --retry-all-errors -o install_tools.sh https://raw.githubusercontent.com/canonical/certification-lab-ci-tools/refs/heads/main/install_tools.sh
 source install_tools.sh $TOOLS_PATH
 ```
 
