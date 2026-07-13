@@ -8,6 +8,7 @@ import smtplib
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.utils import formatdate
 
 SMTPSERVER = os.environ.get('SMTP_SERVER', 'localhost')
 
@@ -74,6 +75,7 @@ def send_mail(to=None, subject="(No Subject)", body=None, attachments=None):
     msg['Subject'] = subject
     msg['From'] = 'noreply@canonical.com'
     msg['To'] = to
+    msg['Date'] = formatdate(localtime=True)
 
     s = smtplib.SMTP(SMTPSERVER)
     s.send_message(msg)
