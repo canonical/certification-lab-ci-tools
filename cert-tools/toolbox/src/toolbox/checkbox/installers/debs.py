@@ -7,7 +7,6 @@ from toolbox.devices import Device
 from toolbox.entities.risk import Risk
 from toolbox.interfaces.debs import DebInterface
 
-
 logger = logging.getLogger(__name__)
 
 

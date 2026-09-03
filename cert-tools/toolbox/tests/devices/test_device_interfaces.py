@@ -1,7 +1,6 @@
 """Tests for Device initialization and interface attachment."""
 
 import pytest
-
 from toolbox.interfaces import DeviceInterface, DeviceInterfaceError
 
 from tests.devices.trivial import TrivialDevice
@@ -11,19 +10,16 @@ from tests.devices.trivial import TrivialDevice
 class InterfaceA(DeviceInterface):
     """Simple test interface."""
 
-    pass
 
 
 class InterfaceB(DeviceInterface):
     """Another simple test interface."""
 
-    pass
 
 
 class InterfaceC(DeviceInterface, requires=(InterfaceA,)):
     """Test interface that requires InterfaceA."""
 
-    pass
 
 
 class TestDeviceInitialization:

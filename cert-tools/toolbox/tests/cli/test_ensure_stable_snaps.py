@@ -2,7 +2,6 @@ import sys
 from collections import Counter
 
 import pytest
-
 from toolbox.cli import ensure_stable_snaps
 from toolbox.entities.channels import Channel
 from toolbox.entities.snaps import SnapSpecifier

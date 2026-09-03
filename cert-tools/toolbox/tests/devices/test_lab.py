@@ -4,7 +4,6 @@ import os
 
 import pytest
 from fabric.config import Config
-
 from toolbox.devices.lab import LabDevice, LabExecutionError
 
 

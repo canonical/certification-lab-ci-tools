@@ -1,7 +1,6 @@
 """Tests for the toolbox.interfaces.status module."""
 
 import pytest
-
 from invoke import Result
 from toolbox.interfaces.status import SystemStatusInterface
 from toolbox.results import BooleanResult

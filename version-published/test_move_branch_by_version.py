@@ -1,5 +1,6 @@
 import unittest
-from unittest.mock import patch, call
+from unittest.mock import call, patch
+
 import move_branch_by_version
 
 

@@ -22,7 +22,6 @@ import re
 import subprocess
 import tempfile
 import textwrap
-from typing import List, Optional
 from urllib.parse import urlparse
 
 logging.basicConfig(level=logging.INFO)
@@ -33,7 +32,7 @@ UBUNTU_RELEASE = 25
 DEFAULT_KEYRING_DIR = "/etc/apt/keyrings"
 
 
-def neatly_run_command(cmd: List[str]) -> str:
+def neatly_run_command(cmd: list[str]) -> str:
     """
     This command tries to run command and if the command fails it will log the
     error and exit the program.
@@ -126,7 +125,7 @@ def create_apt_auth_file(ppa: str, login: str, password: str) -> None:
         """
     ).format(f"{host}/{path}", login, password)
 
-    auth_file_path = "/etc/apt/auth.conf.d/ppa-{}.conf".format(ppa_name)
+    auth_file_path = f"/etc/apt/auth.conf.d/ppa-{ppa_name}.conf"
     if os.path.exists(auth_file_path):
         logging.warning("Credentials file already exists: %s", auth_file_path)
         logging.warning("Not overwriting it.")
@@ -163,11 +162,11 @@ def parse_ppa_url(url: str) -> str:
     host = parsed_url.netloc
     path = parsed_url.path
     if not path.startswith("/"):
-        raise ValueError("URL is not a PPA address: {}".format(url))
+        raise ValueError(f"URL is not a PPA address: {url}")
     return host, path[1:]
 
 
-def add_ppa_to_sources_list(ppa: str, keyring_file: Optional[str]) -> None:
+def add_ppa_to_sources_list(ppa: str, keyring_file: str | None) -> None:
     """
     Add the PPA to the sources.list file.
 
@@ -176,7 +175,7 @@ def add_ppa_to_sources_list(ppa: str, keyring_file: Optional[str]) -> None:
     """
     _, ppa_path = parse_ppa_url(ppa)
     ppa_name = slugify(ppa_path)
-    sources_list_file = "/etc/apt/sources.list.d/{}.list".format(ppa_name)
+    sources_list_file = f"/etc/apt/sources.list.d/{ppa_name}.list"
     release_codename = guess_ubuntu_codename()
     release = guess_ubuntu_release()
     if release >= UBUNTU_RELEASE and keyring_file:
@@ -203,7 +202,7 @@ def add_ppa_to_sources_list(ppa: str, keyring_file: Optional[str]) -> None:
         logging.info("Created sources list file: %s", sources_list_file)
 
 
-def add_ppa_key(key: str) -> Optional[str]:
+def add_ppa_key(key: str) -> str | None:
     """
     Add the PPA's key to the system.
 
@@ -232,10 +231,10 @@ def add_ppa_key_gpg(key: str) -> str:
     # Create the keyring directory if it doesn't exist
     os.makedirs(DEFAULT_KEYRING_DIR, exist_ok=True)
 
-    keyring_file = os.path.join(DEFAULT_KEYRING_DIR, "{}.gpg".format(key))
+    keyring_file = os.path.join(DEFAULT_KEYRING_DIR, f"{key}.gpg")
     keyserver_url = (
-        "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x{}"
-    ).format(key)
+        f"https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x{key}"
+    )
 
     # Use a temporary directory for downloading the armored key
     with tempfile.TemporaryDirectory() as tmpdir:

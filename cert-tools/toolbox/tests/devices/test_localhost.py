@@ -2,7 +2,6 @@
 
 from invoke import Context, Result
 from invoke.exceptions import Failure
-
 from toolbox.devices import LocalHost
 
 

@@ -1,7 +1,6 @@
 """Tests for Channel and Risk entities."""
 
 import pytest
-
 from toolbox.entities.channels import Channel, Risk
 
 

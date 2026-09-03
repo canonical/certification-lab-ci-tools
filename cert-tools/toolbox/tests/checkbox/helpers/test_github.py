@@ -4,7 +4,6 @@ from typing import NamedTuple
 
 import pytest
 from packaging.version import Version
-
 from toolbox.checkbox.helpers.github import CheckboxVersionHelper
 
 

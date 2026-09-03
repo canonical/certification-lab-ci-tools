@@ -1,13 +1,13 @@
 import base64
+
 import pytest
 import requests_mock
 from pytest import fixture
-
 from test_executions_rerunner import (
-    JenkinsProcessor,
     GithubProcessor,
-    Rerunner,
+    JenkinsProcessor,
     RequestProccesingError,
+    Rerunner,
     TestObserverInterface,
 )
 

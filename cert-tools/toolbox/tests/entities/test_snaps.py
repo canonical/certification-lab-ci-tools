@@ -1,7 +1,6 @@
 """Tests for SnapSpecifier entity."""
 
 import pytest
-
 from toolbox.entities.channels import Channel
 from toolbox.entities.snaps import SnapSpecifier
 

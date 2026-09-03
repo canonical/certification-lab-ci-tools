@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-import os
-import textwrap
 import argparse
-import time
-import random
 import itertools
+import os
+import random
+import textwrap
+import time
 
 
 def parse_args():
@@ -16,8 +16,8 @@ def parse_args():
 def pretty_m_s(seconds):
     minutes = seconds // 60
     if minutes == 0:
-        return "{} seconds".format(seconds)
-    return "{} minutes".format(minutes)
+        return f"{seconds} seconds"
+    return f"{minutes} minutes"
 
 
 def main():
@@ -33,15 +33,15 @@ def main():
 
     print(
         textwrap.dedent(
-            """
+            f"""
     Staggering this run out to lower pressure on the lab network.
-    This test run will start in {}.
+    This test run will start in {pretty_deadline}.
 
     Will now print a spinner to avoid Output Timeout!
     You want to skip this?
     - Restart the job with NO_STAGGER envvar
-    - Kill this process, my PID is: {}
-    """.format(pretty_deadline, os.getpid())
+    - Kill this process, my PID is: {os.getpid()}
+    """
         ).strip()
     )
     print(flush=True)

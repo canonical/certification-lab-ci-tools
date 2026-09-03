@@ -18,14 +18,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import argparse
-from launchpadlib.launchpad import Launchpad
+import json
+import os
+import time
 from collections import defaultdict
 from datetime import date, datetime, timedelta
-import json
+
 import pytz
 import requests
-import time
-import os
+from launchpadlib.launchpad import Launchpad
 
 ALL_STATUSES = [
     "Fix Committed",
@@ -68,7 +69,7 @@ class StatHarvester:
         launchpad = Launchpad.login_with(
             "stats-harvester", "production", credentials_file="./lp_credentials"
         )
-        print("Searching for '{}' bugs modified since {}".format(self.proj, self.since))
+        print(f"Searching for '{self.proj}' bugs modified since {self.since}")
         modified_bugs = launchpad.projects[self.proj].searchTasks(
             status=ALL_STATUSES, modified_since=self.since
         )
@@ -76,15 +77,13 @@ class StatHarvester:
         start_time = time.time()
         for i, bug in enumerate(modified_bugs, 1):
             print(
-                "Processing bug {}/{}. Estimated time to complete {}".format(
-                    i, len(modified_bugs), time_left_str
-                )
+                f"Processing bug {i}/{len(modified_bugs)}. Estimated time to complete {time_left_str}"
             )
             self._process_bug(bug)
             cur_time = time.time()
             estimated_total = (cur_time - start_time) * len(modified_bugs) / i
             estimated_time_left = max(0, start_time + estimated_total - cur_time)
-            time_left_str = "{:.2f}s".format(estimated_time_left)
+            time_left_str = f"{estimated_time_left:.2f}s"
         self.generate_timeline()
 
     def generate_timeline(self):
@@ -187,7 +186,7 @@ class StatHarvester:
             }
             measurements.append(point)
 
-        bork_url = "http://{}/influx".format(bork_addr)
+        bork_url = f"http://{bork_addr}/influx"
         # infrastructure can choke on too big bundle of records,
         # so let's chop it into 1000-record-long chunks
         while measurements:
@@ -200,9 +199,7 @@ class StatHarvester:
             response = requests.post(bork_url, json=request)
             if not response:
                 print(
-                    "Couldn't push measurements:\n{}: {}".format(
-                        response, response.text
-                    )
+                    f"Couldn't push measurements:\n{response}: {response.text}"
                 )
 
     def dump_last_stats(self):
@@ -210,12 +207,12 @@ class StatHarvester:
             "date": self.until.strftime("%Y-%m-%dT%H:%M:%S%z"),
             "stats": self.bugs_timeline[self.until.date()],
         }
-        with open("{}-last-stats.json".format(self.proj), "wt") as f:
+        with open(f"{self.proj}-last-stats.json", "wt") as f:
             json.dump(last_state, f, indent=2)
 
     def load_last_stats(self):
         try:
-            with open("{}-last-stats.json".format(self.proj), "rt") as f:
+            with open(f"{self.proj}-last-stats.json", "rt") as f:
                 stats = json.load(f)
             stats["date"] = datetime.strptime(stats["date"], "%Y-%m-%dT%H:%M:%S%z")
             return stats
@@ -237,7 +234,7 @@ class StatHarvester:
         possible_name = basename + ".json"
         if os.path.exists(possible_name):
             for i in range(1, 1000):
-                possible_name = "{}({}).json".format(basename, i)
+                possible_name = f"{basename}({i}).json"
                 if not os.path.exists(possible_name):
                     return possible_name
         else:
@@ -253,7 +250,7 @@ class StatHarvester:
         # the first status change encounter
         seen_first_change = False
         for act in bug.bug.activity:
-            if act.whatchanged == "{}: status".format(self.proj):
+            if act.whatchanged == f"{self.proj}: status":
                 if not seen_first_change:
                     born_status = act.oldvalue
                     seen_first_change = True

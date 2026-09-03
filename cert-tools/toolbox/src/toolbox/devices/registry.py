@@ -1,9 +1,9 @@
 """Registry for managing device interfaces and their dependencies."""
 
-from typing import Iterable, Iterator, Type, TypeVar
+from collections.abc import Iterable, Iterator
+from typing import TypeVar
 
 from toolbox.interfaces import DeviceInterface, DeviceInterfaceError
-
 
 T = TypeVar("T", bound=DeviceInterface)
 
@@ -27,7 +27,7 @@ class DeviceInterfaceRegistry:
             self._register(interface)
         self._check_requirements()
 
-    def __getitem__(self, interface_cls: Type[T]) -> T:
+    def __getitem__(self, interface_cls: type[T]) -> T:
         """Retrieve an interface by its class type."""
         identifier = interface_cls.__name__
         try:

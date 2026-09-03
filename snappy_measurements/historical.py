@@ -19,7 +19,6 @@ import json
 import os
 import re
 import subprocess
-
 from collections import defaultdict
 from datetime import datetime, timedelta
 
@@ -76,21 +75,21 @@ def get_latest_builds():
             res = wget(url.format(job_name=proj))
         except WgetError:
             print(
-                'Unable to fetch "{}" jenkins project information. '
-                "Is the project still available?".format(proj)
+                f'Unable to fetch "{proj}" jenkins project information. '
+                "Is the project still available?"
             )
             continue
         job_desc = json.loads(res)
         try:
             builds[proj] = job_desc["lastBuild"]["number"]
         except KeyError:
-            print("failed to get last build number for {}".format(proj))
+            print(f"failed to get last build number for {proj}")
     return builds
 
 
 def pull(proj, index):
-    print("pulling artifacts of job #{} for {}".format(index, proj))
-    base_url = JENKINS + "view/Core/job/{}/{}/".format(proj, index)
+    print(f"pulling artifacts of job #{index} for {proj}")
+    base_url = JENKINS + f"view/Core/job/{proj}/{index}/"
     snap_url = base_url + "artifact/artifacts/snaplist.txt/*view*/"
     console_url = base_url + "consoleText"
     submission_url = base_url + "artifact/artifacts/submission.json/*view*/"
@@ -113,7 +112,7 @@ def download_artifacts(projects):
         builds = projects[proj][:]
         for index in builds:
             if os.path.exists(str(index)):
-                print("{}/{} already exists. Skipping.".format(proj, index))
+                print(f"{proj}/{index} already exists. Skipping.")
                 continue
             os.mkdir(str(index))
             os.chdir(str(index))
@@ -131,7 +130,7 @@ def download_artifacts(projects):
 def extract_timestamp(path):
     dt = None
     with open(os.path.join(path, "meta"), "rt") as f:
-        for line in f.readlines():
+        for line in f:
             regex = re.compile(r"\d{4}-\d{2}-\d{2}\ \d{2}:\d{2}:\d{2}")
             match = regex.match(line)
             if match:
@@ -174,7 +173,7 @@ def push_results(projects):
                     try:
                         content = json.load(f)
                     except json.JSONDecodeError:
-                        print("Failed to parse {}".format(submission_file))
+                        print(f"Failed to parse {submission_file}")
                         continue
                     iqw = InfluxQueryWriter(proj, content, timestamp)
                     res = push_to_influx(iqw.extract_measurements())

@@ -9,7 +9,6 @@ Example invocation:
 """
 
 import sys
-
 from argparse import ArgumentParser
 
 from snap_info_utility import get_snap_info_from_store

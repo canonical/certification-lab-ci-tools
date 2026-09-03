@@ -16,7 +16,6 @@
 #       Maciej Kisielewski <maciej.kisielewski@canonical.com>
 
 import unittest
-
 from unittest.mock import MagicMock
 
 from measure_snappy_jobs import InfluxQueryWriter

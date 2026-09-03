@@ -2,14 +2,13 @@
 
 import logging
 import os
-from typing import Iterable
+from collections.abc import Iterable
 
 from fabric.config import Config
 from paramiko.config import SSHConfig
 
 from toolbox.devices import RemoteHost
 from toolbox.interfaces import DeviceInterface
-
 
 logger = logging.getLogger(__name__)
 

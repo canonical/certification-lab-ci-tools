@@ -1,7 +1,6 @@
 """Tests for the toolbox.interfaces.snapd module."""
 
 import pytest
-
 from invoke import Result
 from toolbox.interfaces.snapd import SnapdAPIClient, SnapdAPIError
 

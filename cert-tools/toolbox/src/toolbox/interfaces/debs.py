@@ -1,13 +1,13 @@
 """Interface for managing Debian packages on devices."""
 
 import logging
-from typing import Iterable
+from collections.abc import Iterable
 
 from invoke import Result
 
-from toolbox.results import BooleanResult
 from toolbox.interfaces import DeviceInterface
-from toolbox.retries import retry, RetryPolicy
+from toolbox.results import BooleanResult
+from toolbox.retries import RetryPolicy, retry
 
 logger = logging.getLogger(__name__)
 

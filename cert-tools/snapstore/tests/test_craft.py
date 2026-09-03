@@ -1,10 +1,9 @@
-from pytest import raises
 from craft_store.errors import CraftStoreError
-
+from pytest import raises
 from snapstore.craft import (
-    create_ubuntu_one_store_client,
-    create_http_client,
     create_base_client,
+    create_http_client,
+    create_ubuntu_one_store_client,
 )
 
 

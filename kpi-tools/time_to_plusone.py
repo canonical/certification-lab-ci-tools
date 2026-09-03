@@ -18,11 +18,8 @@
 #        Chris Wayne <cwayne@ubuntu.com>
 
 import argparse
-import datetime
-import re
-import requests
-import time
 import os
+import re
 
 from dateutil import parser
 from influxdb import InfluxDBClient

@@ -1,6 +1,5 @@
-import pytest
-
 import influx
+import pytest
 
 
 @pytest.fixture

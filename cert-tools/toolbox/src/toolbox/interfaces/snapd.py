@@ -3,11 +3,12 @@
 Reference: https://snapcraft.io/docs/snapd-api
 """
 
-from contextlib import suppress
-from io import StringIO
 import json
 import re
+from contextlib import suppress
+from io import StringIO
 from urllib.parse import urlencode
+
 import yaml
 
 from toolbox.interfaces import DeviceInterface

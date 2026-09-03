@@ -21,7 +21,6 @@ import lzma
 import re
 import string
 import time
-import typing
 from multiprocessing.pool import Pool
 from pathlib import Path
 from urllib.error import HTTPError
@@ -87,7 +86,7 @@ def _parse_package_name_version(package_spec: str) -> tuple:
     raise ValueError(f"Unable to parse package_spec '{package_spec}'")
 
 
-def parse_package_name_version(package_spec: str) -> typing.Optional[tuple]:
+def parse_package_name_version(package_spec: str) -> tuple | None:
     try:
         return _parse_package_name_version(package_spec)
     except ValueError as e:
@@ -119,7 +118,7 @@ def download_package_info_preserve(series_pocket_repo_arch) -> Path:
         pass
 
     url = get_url(series, pocket, repo, arch)
-    for i in range(0, RETRY):
+    for i in range(RETRY):
         try:
             path = download_package_xz(url, CACHE)
             break

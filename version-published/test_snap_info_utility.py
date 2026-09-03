@@ -1,7 +1,6 @@
-import unittest
-from unittest.mock import patch, MagicMock
-
 import textwrap
+import unittest
+from unittest.mock import MagicMock, patch
 
 import snap_info_utility
 

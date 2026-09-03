@@ -5,7 +5,6 @@ import logging
 import os
 
 from snapstore.client import SnapstoreClient
-
 from toolbox.checkbox.helpers.connector import Predicate, SelectSnaps, SnapConnector
 from toolbox.checkbox.helpers.runtime import CheckboxRuntimeHelper
 from toolbox.checkbox.installers import CheckboxInstaller

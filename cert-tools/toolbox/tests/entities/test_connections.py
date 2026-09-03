@@ -1,7 +1,6 @@
 """Tests for SnapConnection entity."""
 
 import pytest
-
 from toolbox.entities.connections import SnapConnection
 
 

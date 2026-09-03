@@ -1,5 +1,5 @@
-from dataclasses import dataclass, astuple
 import re
+from dataclasses import astuple, dataclass
 
 from toolbox.entities.risk import Risk
 

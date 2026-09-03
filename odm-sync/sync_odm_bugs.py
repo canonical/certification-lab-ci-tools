@@ -20,16 +20,16 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import argparse
-from launchpadlib.launchpad import Launchpad
-from lazr.restfulclient.errors import NotFound
 import datetime
 import hashlib
-import pygsheets
-import re
 import logging
+import re
 import sys
-
 from fnmatch import fnmatch
+
+import pygsheets
+from launchpadlib.launchpad import Launchpad
+from lazr.restfulclient.errors import NotFound
 
 """
 This programs keeps ODM projects' bugs in sync with the Somerville project.
@@ -39,7 +39,7 @@ For more information see: goo.gl/ajiwG4
 try:
     import odm_sync_config
 except ImportError as exc:
-    raise SystemExit("Problem with reading the config: {}".format(exc))
+    raise SystemExit(f"Problem with reading the config: {exc}")
 
 status_list = [
     "New",
@@ -211,14 +211,14 @@ class SyncTool:
                     self.bug_xref_db[bug.id] = new_bug.id
                     self.bug_xref_db[new_bug.id] = bug.id
                     message = (
-                        "This bug is from [{}] Launchpad project."
-                        "\nPlease refer to Bug #{}".format(proj, bug.id)
+                        f"This bug is from [{proj}] Launchpad project."
+                        f"\nPlease refer to Bug #{bug.id}"
                     )
                     self._add_comment(new_bug.bug_tasks[0], message)
                     message = (
-                        "This bug has been synced to {} Launchpad"
+                        f"This bug has been synced to {self._cfg.umbrella_project} Launchpad"
                         " project successfully.\nPlease refer to Bug"
-                        " #{}".format(self._cfg.umbrella_project, new_bug.id)
+                        f" #{new_bug.id}"
                     )
                     self._add_comment(bug_task, message)
 
@@ -236,11 +236,8 @@ class SyncTool:
 
                     def att_hash(att):
                         hash_cache = {}
-                        if att.self_link not in hash_cache.keys():
-                            hash_cache[att.self_link] = "{}-{}".format(
-                                att.title,
-                                hashlib.sha1(att.data.open().read()).hexdigest(),
-                            )
+                        if att.self_link not in hash_cache:
+                            hash_cache[att.self_link] = f"{att.title}-{hashlib.sha1(att.data.open().read()).hexdigest()}"
                         return hash_cache[att.self_link]
 
                     new_content += ", ".join([att_hash(a) for a in msg.bug_attachments])
@@ -289,7 +286,7 @@ class SyncTool:
                             msg.content,
                         )
                         self._add_comment(umb_bug.bug_tasks[0], content, attachments)
-                    except NotFound as exc:
+                    except NotFound:
                         logging.info("Skipping comment (Probably hidden)")
                 for msg in umb_messages:
                     trimmed_odm_comments = trim_messages(odm_messages)
@@ -312,7 +309,7 @@ class SyncTool:
                             msg.content,
                         )
                         self._add_comment(odm_bug.bug_tasks[0], content, attachments)
-                    except NotFound as exc:
+                    except NotFound:
                         logging.info("Skipping comment (Probably hidden)")
                 self._sync_meta(odm_bug, umb_bug)
 

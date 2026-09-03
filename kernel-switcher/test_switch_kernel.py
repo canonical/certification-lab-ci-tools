@@ -14,19 +14,20 @@
 
 import argparse
 import unittest
-
 from unittest.mock import call, mock_open, patch
 
-from switch_kernel import add_efi_opt
-from switch_kernel import assert_root
-from switch_kernel import find_menuentry_for_kernel
-from switch_kernel import get_grub_cfg_contents
-from switch_kernel import get_grub_default_contents
-from switch_kernel import get_submenu_entry
-from switch_kernel import main
-from switch_kernel import parse_args
-from switch_kernel import update_grub_default_contents
-from switch_kernel import update_cmd_linux
+from switch_kernel import (
+    add_efi_opt,
+    assert_root,
+    find_menuentry_for_kernel,
+    get_grub_cfg_contents,
+    get_grub_default_contents,
+    get_submenu_entry,
+    main,
+    parse_args,
+    update_cmd_linux,
+    update_grub_default_contents,
+)
 
 
 class TestAssertRoot(unittest.TestCase):

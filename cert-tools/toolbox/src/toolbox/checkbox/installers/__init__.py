@@ -1,12 +1,10 @@
 """Base classes for Checkbox installation on devices."""
 
-from abc import ABC, abstractmethod
 import logging
-
+from abc import ABC, abstractmethod
 
 from toolbox.checkbox.helpers.github import CheckboxVersionHelper
 from toolbox.devices import Device
-
 
 logger = logging.getLogger(__name__)
 

@@ -10,8 +10,8 @@ import io
 import os
 
 import numpy as np
-import plotly.graph_objects as go
 import pandas as pd
+import plotly.graph_objects as go
 import requests
 
 
@@ -69,7 +69,7 @@ def plot(args):
                                 axis=-1,
                             ),
                             hovertemplate=template,
-                            name="{} start ({})".format(start, release),
+                            name=f"{start} start ({release})",
                         )
                     )
             fig.update_yaxes(range=[0, ymax + 1])

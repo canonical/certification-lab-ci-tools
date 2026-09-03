@@ -1,9 +1,9 @@
-from argparse import ArgumentParser
 import sys
+from argparse import ArgumentParser
 
 from toolbox.devices.lab import LabDevice
-from toolbox.retries import Linear
 from toolbox.interfaces.status import SystemStatusInterface
+from toolbox.retries import Linear
 
 
 def main():

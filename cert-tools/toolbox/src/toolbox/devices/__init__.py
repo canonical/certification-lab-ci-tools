@@ -1,9 +1,9 @@
 """Device abstractions for executing commands locally and remotely."""
 
-from abc import ABC, abstractmethod
 import logging
 import shlex
-from typing import Iterable
+from abc import ABC, abstractmethod
+from collections.abc import Iterable
 
 from fabric import Connection
 from invoke import Context, Result
@@ -11,10 +11,8 @@ from invoke.exceptions import Failure, ThreadException
 from paramiko.config import SSHConfig
 from paramiko.ssh_exception import SSHException
 
-
-from toolbox.interfaces import DeviceInterface
 from toolbox.devices.registry import DeviceInterfaceRegistry
-
+from toolbox.interfaces import DeviceInterface
 
 logger = logging.getLogger(__name__)
 

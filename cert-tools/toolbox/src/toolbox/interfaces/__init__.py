@@ -1,7 +1,8 @@
 """Interfaces are attached to devices, endowing them with specific capabilities (like rebooting or managing snaps)."""
 
 from abc import ABC
-from typing import Iterable, Type
+from collections.abc import Iterable
+from typing import Type
 
 
 class DeviceInterfaceError(AttributeError):
@@ -11,10 +12,10 @@ class DeviceInterfaceError(AttributeError):
 class DeviceInterface(ABC):
     """Base class for device capabilities that can be attached to devices."""
 
-    requires: Iterable[Type["DeviceInterface"]]
+    requires: Iterable[type["DeviceInterface"]]
 
     def __init_subclass__(
-        cls, *, requires: Iterable[Type["DeviceInterface"]] | None = None
+        cls, *, requires: Iterable[type["DeviceInterface"]] | None = None
     ):
         """Register interface dependencies declared via the requires parameter."""
         cls.requires = tuple(requires or ())

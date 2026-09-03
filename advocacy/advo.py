@@ -8,7 +8,6 @@ import subprocess
 
 from influxdb import InfluxDBClient
 
-
 INFLUX_HOST = "10.50.124.12"
 
 
@@ -59,7 +58,7 @@ def main():
     if "snap,cold,hot" not in csv:
         raise SystemExit("CSV format unsupported")
 
-    url = "{}api/json".format(build_url)
+    url = f"{build_url}api/json"
     try:
         res = curl(url)
     except CurlError:
@@ -88,7 +87,7 @@ def main():
         try:
             cause_desc = build_desc["actions"][1]["causes"][0]["shortDescription"]
             if "URLTrigger" in cause_desc:
-                res = curl("{}triggerCauseAction/".format(build_url))
+                res = curl(f"{build_url}triggerCauseAction/")
                 m = re.search("The value for the JSON Path '(.*?)' has changed.", res)
                 cause = m.group(1)
         except (KeyError, IndexError):
@@ -141,7 +140,7 @@ def main():
                     "fields": {
                         "hot": hot,
                         "cold": cold,
-                        "jenkins": '<a href="{}">Jenkins build</a>'.format(build_url),
+                        "jenkins": f'<a href="{build_url}">Jenkins build</a>',
                     },
                     "time": date,
                 }

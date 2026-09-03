@@ -23,7 +23,6 @@ and posts measurements to the InfluxDB via Taipei Lab DB-bridge
 """
 
 import time
-
 from pprint import pprint
 
 import pygsheets
@@ -114,11 +113,11 @@ def get_prebaked_kpis():
     for row_num, row in enumerate(all_vals, start=1):
         if row[0].lower() in ["iot overall", "store overall", "pc overall"]:
             lob = row[0].split(" ")[0].lower()
-            kpis["avg_{}_time_to_market".format(lob)] = optional_int(row[1]) or 0
-            kpis["avg_{}_budget_variance".format(lob)] = optional_percent(row[2]) or 0
-            kpis["avg_{}_scope_creep".format(lob)] = optional_int(row[3]) or 0
-            kpis["avg_{}_nps".format(lob)] = optional_int(row[4]) or 0
-            kpis["avg_{}_roi".format(lob)] = optional_percent(row[5]) or 0
+            kpis[f"avg_{lob}_time_to_market"] = optional_int(row[1]) or 0
+            kpis[f"avg_{lob}_budget_variance"] = optional_percent(row[2]) or 0
+            kpis[f"avg_{lob}_scope_creep"] = optional_int(row[3]) or 0
+            kpis[f"avg_{lob}_nps"] = optional_int(row[4]) or 0
+            kpis[f"avg_{lob}_roi"] = optional_percent(row[5]) or 0
     return kpis
 
 
@@ -141,7 +140,7 @@ def main():
     }
     response = requests.post("http://10.101.51.246:8000/influx", json=reqobj)
     if not response.ok:
-        raise SystemExit("Failed to post measurements:\n{}".format(response.text))
+        raise SystemExit(f"Failed to post measurements:\n{response.text}")
 
 
 if __name__ == "__main__":

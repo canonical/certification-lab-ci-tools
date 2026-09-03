@@ -15,7 +15,6 @@ import subprocess
 import sys
 import tempfile
 
-
 """
 This program checks if checkbox-snappy can be snapped and whether "Smoke Tests"
 test plan passes after installing that snap.
@@ -45,18 +44,16 @@ class Snap:
     def clone(self):
         if self._run_cmd(["git", "clone", "-b", self._branch, self._repo, "."]) != 0:
             raise Exception(
-                "Failed to git-clone. Repo: {}. Branch: {}".format(
-                    self._repo, self._branch
-                )
+                f"Failed to git-clone. Repo: {self._repo}. Branch: {self._branch}"
             )
-        print("cloned into {}".format(self._work_dir))
+        print(f"cloned into {self._work_dir}")
 
     def snap(self):
         if self._run_cmd(["snapcraft"]) != 0:
             raise Exception("Failed to snap checkbox-snappy")
         # the last line in the log should contain "Snapped $SNAPNAME"
         self._snap_path = self._tail_log().split()[1]
-        print("{} snapped.".format(self._snap_path))
+        print(f"{self._snap_path} snapped.")
 
     def __exit__(self, exc_type, exc_value, traceback):
         if not self._dont_clean:
@@ -95,7 +92,7 @@ class Snap:
         if self._log:
             self._run_cmd(["pastebinit", "snap-smoke.log"])
             # last line contains URL from pastebinit
-            print("log: {}".format(self._tail_log()))
+            print(f"log: {self._tail_log()}")
         else:
             print("log: empty")
 
@@ -104,7 +101,7 @@ def main():
     if len(sys.argv) == 2:
         if sys.argv[1] in ["-h", "--help"]:
             print("Snaps checkbox-snappy, installs it, and runs smoke-tests.")
-            print("Usage:\n\t{} [BRANCH_NAME]".format(sys.argv[0]))
+            print(f"Usage:\n\t{sys.argv[0]} [BRANCH_NAME]")
             print()
             print("If BRANCH_NAME is omitted, master is used")
             return 0

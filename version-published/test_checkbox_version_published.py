@@ -1,18 +1,17 @@
-import requests
 import unittest
+from unittest.mock import MagicMock, patch
 
-from unittest.mock import patch, MagicMock
-
+import requests
 from checkbox_version_published import (
-    SnapSpec,
     PackageSpec,
-    get_snap_specs,
-    get_snap_info_from_store,
-    is_snap_available,
+    SnapSpec,
+    check_availability,
+    check_packages_availability,
     check_snaps_availability,
     get_package_specs,
-    check_packages_availability,
-    check_availability,
+    get_snap_info_from_store,
+    get_snap_specs,
+    is_snap_available,
     main,
 )
 

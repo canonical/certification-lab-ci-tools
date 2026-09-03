@@ -1,6 +1,5 @@
-from craft_store import endpoints, HTTPClient, UbuntuOneStoreClient
+from craft_store import HTTPClient, UbuntuOneStoreClient, endpoints
 from craft_store.errors import CraftStoreError
-
 
 BASE_URL = "https://dashboard.snapcraft.io"
 STORAGE_BASE_URL = "https://upload.apps.staging.ubuntu.com"

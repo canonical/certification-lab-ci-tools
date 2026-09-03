@@ -17,14 +17,11 @@
 # Written by:
 #        Chris Wayne <cwayne@ubuntu.com>
 
-import json
 import os
+
 import requests
-import sys
-
-from influxdb import InfluxDBClient
 from dateutil import parser
-
+from influxdb import InfluxDBClient
 
 INFLUX_HOST = "10.50.124.12"
 
@@ -50,7 +47,7 @@ def push_influx_generic(measurement, tags, time, fields):
 
     body = [{"measurement": measurement, "tags": tags, "time": time, "fields": fields}]
     client.write_points(body)
-    print("Measurement pushed to influx at {}".format(time))
+    print(f"Measurement pushed to influx at {time}")
 
 
 def main():
@@ -61,7 +58,7 @@ def main():
     url = "https://certification.canonical.com/api/v1/certifiedmodeldetails/report/?format=json"
     r = requests.get(url)
     if not r.ok:
-        raise SystemExit("Unable to access report. HTTP {}".format(r.status_code))
+        raise SystemExit(f"Unable to access report. HTTP {r.status_code}")
     report = r.json()
     measure = "pre-certs-report"
 

@@ -8,13 +8,11 @@ from toolbox.interfaces import DeviceInterface
 class InterfaceA(DeviceInterface):
     """Simple test interface."""
 
-    pass
 
 
 class InterfaceB(DeviceInterface):
     """Another simple test interface."""
 
-    pass
 
 
 class TestDeviceProcess:

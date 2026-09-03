@@ -1,13 +1,11 @@
 # Tests for the mailtool script
 # Run as ``pytest test_mailtool.py``
 
-import sys
-import os
 import importlib.util
-import pytest
+import os
 import socket
-from unittest.mock import patch, MagicMock
-from pathlib import Path
+import sys
+from unittest.mock import MagicMock, patch
 
 
 def load_mailtool():

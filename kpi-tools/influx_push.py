@@ -20,8 +20,8 @@
 """Push measurements stored in JSON file to InfluxDB."""
 
 import json
-
 from argparse import ArgumentParser
+
 from influxdb import InfluxDBClient
 
 
@@ -42,7 +42,7 @@ def validate_point(data_point):
         (empty list on everything being ok)
     """
     if not isinstance(data_point, dict):
-        return ["Data point {} is not a dict".format(data_point)]
+        return [f"Data point {data_point} is not a dict"]
     mandatory = {
         "measurement": [str],
         "fields": [dict],
@@ -55,24 +55,18 @@ def validate_point(data_point):
     for name, types in mandatory.items():
         if name not in data_point.keys():
             errors.append(
-                "Problem with data point: {}. '{}' field missing".format(
-                    data_point, name
-                )
+                f"Problem with data point: {data_point}. '{name}' field missing"
             )
             continue
         if not isanyinstance(data_point[name], types):
             errors.append(
-                "Problem with data point: {}. '{}' is not a type of {}".format(
-                    data_point, name, types
-                )
+                f"Problem with data point: {data_point}. '{name}' is not a type of {types}"
             )
     for name, types in optional.items():
         if name in data_point.keys():
             if not isanyinstance(data_point[name], types):
                 errors.append(
-                    "Problem with data point: {}. '{}' is not a type of {}".format(
-                        data_point, name, types
-                    )
+                    f"Problem with data point: {data_point}. '{name}' is not a type of {types}"
                 )
     return errors
 
@@ -105,7 +99,7 @@ def main():
             for datapoint in datapoints:
                 errors += validate_point(datapoint)
     except json.JSONDecodeError as exc:
-        errors.append("JSON decode error: {}".format(str(exc)))
+        errors.append(f"JSON decode error: {exc!s}")
     if errors:
         raise SystemExit("\n".join(errors))
 
@@ -113,7 +107,7 @@ def main():
         client = InfluxDBClient(host, port, args.username, args.password)
         client.write_points(datapoints, database=args.database)
     except Exception as exc:
-        raise SystemExit("Problem with pushing the data: {}".format(exc))
+        raise SystemExit(f"Problem with pushing the data: {exc}")
 
 
 if __name__ == "__main__":

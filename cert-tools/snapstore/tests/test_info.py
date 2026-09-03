@@ -1,5 +1,4 @@
 from pytest import fixture, mark, raises
-
 from snapstore.client import SnapstoreClient
 from snapstore.info import SnapstoreInfo
 from snapstore.snaps import SnapSpecifier

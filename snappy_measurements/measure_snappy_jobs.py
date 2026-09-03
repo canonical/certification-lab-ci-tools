@@ -47,7 +47,7 @@ BOOTUP_JOB_ID = "info/systemd-analyze"
 
 def dquote(s):
     # surround s with double quotes
-    return '"{}"'.format(s)
+    return f'"{s}"'
 
 
 def to_human_name(hw_id):
@@ -189,7 +189,7 @@ def parse_sysd_analyze(text):
         # there are whole seconds to report
         RE = (
             r"[^\d]*(?P<hours>\s?\d+h)?(?P<minutes>\s?\d+min)?"
-            "(?P<seconds>\s?\d+(\.\d*)?s)?(?P<millis>\s?\d+ms)?"
+            r"(?P<seconds>\s?\d+(\.\d*)?s)?(?P<millis>\s?\d+ms)?"
         )
         groups = re.match(RE, tx).groupdict()
         hours = (groups["hours"] or "0h")[:-1]
@@ -254,7 +254,7 @@ def main():
             try:
                 content = json.load(f)
             except json.JSONDecodeError:
-                raise SystemExit("Failed to parse {}".format(args.SUBMISSION_FILE))
+                raise SystemExit(f"Failed to parse {args.SUBMISSION_FILE}")
             iqw = InfluxQueryWriter(args.hw_id, content, args.timestamp)
             if args.sql:
                 print("\n".join(iqw.generate_sql_inserts()))

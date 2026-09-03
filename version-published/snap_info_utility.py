@@ -48,8 +48,7 @@ def get_version_and_offset(version_str: str):
     # (e.g. v1.2.3-dev45, 1.2.3.dev45, 1.2.3)
 
     # Remove the 'v' prefix if it exists
-    if version_str.startswith("v"):
-        version_str = version_str[1:]
+    version_str = version_str.removeprefix("v")
 
     # Split the version string by '-dev' or '.dev' to handle different formats
     if "-dev" in version_str:

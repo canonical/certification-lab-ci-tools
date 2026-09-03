@@ -1,10 +1,9 @@
 import json
+from pprint import pprint
 
 from flask import Flask, request
-from influxdb import InfluxDBClient
-
 from influx_credentials import credentials
-from pprint import pprint
+from influxdb import InfluxDBClient
 
 
 def validate_point(data_point):
@@ -19,7 +18,7 @@ def validate_point(data_point):
         (empty list on everything being ok)
     """
     if type(data_point) != dict:
-        return ["Data point {} is not a dict".format(data_point)]
+        return [f"Data point {data_point} is not a dict"]
     RIGHT_TYPES = {
         "measurement": [str],
         "tags": [dict],
@@ -30,16 +29,12 @@ def validate_point(data_point):
     for name, types in RIGHT_TYPES.items():
         if name not in data_point.keys():
             errors.append(
-                "Problem with data point: {}. '{}' field missing".format(
-                    data_point, name
-                )
+                f"Problem with data point: {data_point}. '{name}' field missing"
             )
             continue
         if type(data_point[name]) not in types:
             errors.append(
-                "Problem with data point: {}. '{}' is not a type of {}".format(
-                    data_point, name, types
-                )
+                f"Problem with data point: {data_point}. '{name}' is not a type of {types}"
             )
     return errors
 
@@ -72,7 +67,7 @@ def create_app(config_name=None):
             dbname = payload["database"]
             measurements = payload["measurements"]
         except json.decoder.JSONDecodeError as exc:
-            return ("JSON decode error: {}".format(exc), 400)
+            return (f"JSON decode error: {exc}", 400)
         err_msgs = []
         for point in measurements:
             err_msgs += validate_point(point)
@@ -81,7 +76,7 @@ def create_app(config_name=None):
         try:
             query_res = app.influx_client.write_points(measurements, database=dbname)
         except Exception as exc:
-            return ("Failed to write data point: {}".format(exc), 400)
+            return (f"Failed to write data point: {exc}", 400)
         return "OK" if query_res else ("Failed to write data point", 400)
 
     return app

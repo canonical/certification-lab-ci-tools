@@ -73,7 +73,7 @@ def send_mail(to=None, subject="(No Subject)", body=None, attachments=None):
                 )
                 msg.attach(part)
             except Exception:
-                print("Error attaching {}".format(attach_file))
+                print(f"Error attaching {attach_file}")
 
     msg["Subject"] = subject
     msg["From"] = "noreply@canonical.com"

@@ -1,9 +1,9 @@
 """Tests for snap connection connector and predicates."""
 
-import pytest
 from pathlib import Path
 from textwrap import dedent
 
+import pytest
 from toolbox.checkbox.helpers.connector import (
     Blacklist,
     DifferentSnaps,
