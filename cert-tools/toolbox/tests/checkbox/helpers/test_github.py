@@ -142,7 +142,7 @@ class TestCheckboxVersionHelper:
         helper.repo = mock_repo
 
         # Test version 3.6.0.dev2 (should use tag v3.5.0 and offset 2)
-        commit = helper.get_commit_for_version("3.6.0.dev2")
+        commit = helper.get_commit_for_version("3.6.0.dev2", "22")
 
         assert commit == "ghi789"
         mock_repo.compare.assert_called_once_with("v3.5.0~1", "main")
@@ -162,7 +162,7 @@ class TestCheckboxVersionHelper:
         helper = CheckboxVersionHelper()
         helper.repo = mock_repo
 
-        commit = helper.get_commit_for_version("3.6.0")
+        commit = helper.get_commit_for_version("3.6.0", "22")
 
         assert commit == "abc123"
         mock_repo.compare.assert_called_once_with("v3.5.0~1", "main")
@@ -178,7 +178,22 @@ class TestCheckboxVersionHelper:
         helper.repo = mock_repo
 
         with pytest.raises(ValueError, match="Unable to locate a previous tag"):
-            helper.get_commit_for_version("3.0.0")
+            helper.get_commit_for_version("3.0.0", "22")
+
+    @pytest.mark.parametrize("checkbox_major", ["16", "24"])
+    def test_get_commit_for_version_uses_release_branch(self, mocker, checkbox_major):
+        """Test isolated Checkbox versions use their release branch."""
+        mock_repo = mocker.Mock()
+        mock_repo.get_tags.return_value = [Tag("v4.0.0"), Tag("v3.5.0")]
+        mock_repo.compare.return_value.commits = [Commit("abc123")]
+
+        helper = CheckboxVersionHelper()
+        helper.repo = mock_repo
+
+        assert helper.get_commit_for_version("3.6.0", checkbox_major) == "abc123"
+        mock_repo.compare.assert_called_once_with(
+            "v3.5.0~1", f"release/{checkbox_major}"
+        )
 
     def test_init_creates_repo(self, mocker):
         """Test that __init__ creates a GitHub repo object."""
