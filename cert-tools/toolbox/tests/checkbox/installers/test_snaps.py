@@ -20,6 +20,17 @@ class TestCheckboxSnapsInstaller:
     """Tests for CheckboxSnapsInstaller."""
 
     @pytest.mark.parametrize(
+        "runtime_name,expected_major", [("checkbox16", "16"), ("checkbox24", "24")]
+    )
+    def test_get_checkbox_major(self, mocker, runtime_name, expected_major):
+        """Test extracting the Checkbox major from the runtime snap name."""
+        installer = object.__new__(CheckboxSnapsInstaller)
+        installer.runtime = mocker.Mock()
+        installer.runtime.name = runtime_name
+
+        assert installer.get_checkbox_major() == expected_major
+
+    @pytest.mark.parametrize(
         "system_store,model_store,expected_store",
         [
             (None, "branded-store", "branded-store"),
