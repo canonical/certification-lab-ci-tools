@@ -23,6 +23,7 @@ It uses LXD to create a VM in which the test script runs this sequence:
 - reboot
 - check that the older kernel is running
 """
+
 import subprocess
 import shlex
 import time
@@ -153,9 +154,7 @@ def main():
         print(f"Installing 'oldest' available kernel {pkgs[0]}...")
         vm.run_vm_command(f"apt install -y {pkgs[0]}")
         print(f"copying the kernel switcher to the VM...")
-        subprocess.run(
-            ["lxc", "file", "push", "switch_kernel.py", "vm-test/root/"]
-        )
+        subprocess.run(["lxc", "file", "push", "switch_kernel.py", "vm-test/root/"])
         print("Running the kernel switcher...")
         new_kernel = pkgs[0].replace("linux-image-", "")
         vm.run_vm_command(f"python3 switch_kernel.py --enable-efi-vars {new_kernel}")

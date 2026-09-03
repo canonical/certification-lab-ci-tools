@@ -10,8 +10,9 @@ import yaml
 from argparse import ArgumentParser
 
 parser = ArgumentParser()
-parser.add_argument("--config", "-c", required=True,
-                    help="Yaml file with snap names and store data")
+parser.add_argument(
+    "--config", "-c", required=True, help="Yaml file with snap names and store data"
+)
 args = parser.parse_args()
 
 with open(args.config) as f:
@@ -29,9 +30,10 @@ snap:
 """
 mysnapdict = dict()
 for snap, store in SNAPS:
-    url = "https://api.snapcraft.io/v2/snaps/info/{}?fields=version,revision,snap-yaml".format(snap)
-    headers = {"Snap-Device-Series": "16",
-               "Snap-Device-Store": store}
+    url = "https://api.snapcraft.io/v2/snaps/info/{}?fields=version,revision,snap-yaml".format(
+        snap
+    )
+    headers = {"Snap-Device-Series": "16", "Snap-Device-Store": store}
     a = requests.get(url, headers=headers)
     j = a.json()
     if not hasattr(mysnapdict, snap):

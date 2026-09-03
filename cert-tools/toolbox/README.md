@@ -31,12 +31,14 @@ There are different types of devices:
 
 ```python
 from toolbox.devices import LocalHost
+
 device = LocalHost()
 device.run(["uname", "-r"])
 ```
 
 ```python
 from toolbox.devices.lab import LabDevice
+
 # the DEVICE_IP environment variable needs to be set
 device = LabDevice()
 device.run(["uname", "-r"])
@@ -98,7 +100,9 @@ from toolbox.interfaces.reboot import RebootInterface
 from toolbox.interfaces.status import SystemStatusInterface
 
 # the DEVICE_IP environment variable needs to be set
-device = LabDevice(interfaces=[DebInterface(), RebootInterface(), SystemStatusInterface()])
+device = LabDevice(
+    interfaces=[DebInterface(), RebootInterface(), SystemStatusInterface()]
+)
 
 device.interfaces[DebInterface].update()
 device.interfaces[DebInterface].upgrade()
@@ -199,7 +203,7 @@ installer = CheckboxSnapsInstaller(
     device=device,
     agent=LocalHost(),
     frontends=[SnapSpecifier.from_string("checkbox-private-frontend=uc24/beta")],
-    snapstore=SnapstoreClient(create_base_client(TOKEN_ENVIRONMENT_VARIABLE))
+    snapstore=SnapstoreClient(create_base_client(TOKEN_ENVIRONMENT_VARIABLE)),
 )
 # this will also install Checkbox on the agent, from source
 installer.install()
@@ -294,6 +298,7 @@ instance as the remote device:
 
 ```python
 from toolbox.devices.lab import LabDevice
+
 device = LabDevice()
 device.run(["uname", "-n"])
 ```

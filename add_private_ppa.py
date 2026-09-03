@@ -41,14 +41,10 @@ def neatly_run_command(cmd: List[str]) -> str:
     try:
         return subprocess.check_output(cmd, universal_newlines=True)
     except FileNotFoundError as exc:
-        raise SystemExit(
-            "Command not found: {}".format(" ".join(cmd))
-        ) from exc
+        raise SystemExit("Command not found: {}".format(" ".join(cmd))) from exc
     except subprocess.CalledProcessError as exc:
         raise SystemExit(
-            "Problem encountered when running {}: {}".format(
-                " ".join(cmd), exc
-            )
+            "Problem encountered when running {}: {}".format(" ".join(cmd), exc)
         ) from exc
 
 
@@ -59,9 +55,7 @@ def guess_ubuntu_codename() -> str:
     The codename is guessed by running the lsb_release command.
     """
     logging.info("Guessing Ubuntu codename...")
-    codename = neatly_run_command(
-        ["lsb_release", "--codename", "--short"]
-    ).strip()
+    codename = neatly_run_command(["lsb_release", "--codename", "--short"]).strip()
     logging.info("Ubuntu codename guessed: %s", codename)
     return codename
 
@@ -73,9 +67,7 @@ def guess_ubuntu_release() -> int:
     The release is guessed by running the lsb_release command.
     """
     logging.info("Guessing Ubuntu release...")
-    release = neatly_run_command(
-        ["lsb_release", "--release", "--short"]
-    ).strip()
+    release = neatly_run_command(["lsb_release", "--release", "--short"]).strip()
     logging.info("Ubuntu release guessed: %s", release)
     # Only returning the major release number
     return int(release.split(".")[0])
@@ -114,7 +106,7 @@ def slugify(string: str) -> str:
     >>> slugify(r"a/b\\:*?\\"<>| ")
     'a-b----------'
     """
-    return re.sub(r'[\/\\:*?"<>| ]', '-', string)
+    return re.sub(r'[\/\\:*?"<>| ]', "-", string)
 
 
 def create_apt_auth_file(ppa: str, login: str, password: str) -> None:
@@ -193,7 +185,7 @@ def add_ppa_to_sources_list(ppa: str, keyring_file: Optional[str]) -> None:
             deb [signed-by={keyring_file}] {ppa} {release_codename} main
             deb-src [signed-by={keyring_file}] {ppa} {release_codename} main
             """
-        ).format(keyring_file=keyring_file,ppa=ppa, release_codename=release_codename)
+        ).format(keyring_file=keyring_file, ppa=ppa, release_codename=release_codename)
     else:
         contents = textwrap.dedent(
             """
@@ -203,9 +195,7 @@ def add_ppa_to_sources_list(ppa: str, keyring_file: Optional[str]) -> None:
         ).format(ppa=ppa, release_codename=release_codename)
 
     if os.path.exists(sources_list_file):
-        logging.warning(
-            "Sources list file already exists: %s", sources_list_file
-        )
+        logging.warning("Sources list file already exists: %s", sources_list_file)
         logging.warning("Not overwriting it.")
     else:
         with open(sources_list_file, "wt", encoding="utf-8") as src_list_file:
@@ -271,9 +261,7 @@ def add_ppa_key_gpg(key: str) -> str:
 
 def main() -> None:
     """The entry point of the program."""
-    parser = argparse.ArgumentParser(
-        description="Add a private PPA to the system."
-    )
+    parser = argparse.ArgumentParser(description="Add a private PPA to the system.")
     parser.add_argument("ppa", help="The URL of the PPA to add.")
     parser.add_argument("login", help="The login to use for the PPA.")
     parser.add_argument("password", help="The password to use for the PPA.")

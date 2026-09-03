@@ -91,6 +91,4 @@ class TestSnapInfoUtility(unittest.TestCase):
         ]
 
         with self.assertRaises(SystemExit):
-            snap_info_utility.get_revision_at_offset(
-                "v1.2.3-dev5", "/path/to/repo"
-            )
+            snap_info_utility.get_revision_at_offset("v1.2.3-dev5", "/path/to/repo")

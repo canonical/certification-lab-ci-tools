@@ -266,9 +266,7 @@ class TestCheckSnapsAvailability(unittest.TestCase):
 
     @patch("checkbox_version_published.get_snap_info_from_store")
     @patch("checkbox_version_published.is_snap_available")
-    def test_snaps_all_available(
-        self, mock_is_snap_available, mock_get_snap_info
-    ):
+    def test_snaps_all_available(self, mock_is_snap_available, mock_get_snap_info):
         # Mock responses to simulate all snaps being available
         mock_get_snap_info.return_value = {"some": "response"}
         mock_is_snap_available.return_value = True
@@ -280,9 +278,7 @@ class TestCheckSnapsAvailability(unittest.TestCase):
 
     @patch("checkbox_version_published.get_snap_info_from_store")
     @patch("checkbox_version_published.is_snap_available")
-    def test_snaps_not_all_available(
-        self, mock_is_snap_available, mock_get_snap_info
-    ):
+    def test_snaps_not_all_available(self, mock_is_snap_available, mock_get_snap_info):
         # Mock responses to simulate not all snaps being available
         mock_get_snap_info.return_value = {"some": "response"}
         mock_is_snap_available.side_effect = [
@@ -437,9 +433,7 @@ class TestCheckPackagesAvailability(unittest.TestCase):
     @patch("requests.get")
     def test_some_packages_not_available(self, mock_url_get):
         mock_url_get.side_effect = [
-            MagicMock(
-                text=self.get_available_package_html(self.package_specs[0])
-            ),
+            MagicMock(text=self.get_available_package_html(self.package_specs[0])),
             MagicMock(text=""),
         ]
         packages_available = {
@@ -481,9 +475,7 @@ class TestCheckAvailability(unittest.TestCase):
 
     @patch("checkbox_version_published.check_snaps_availability")
     @patch("checkbox_version_published.check_packages_availability")
-    def test_all_available_before_timeout(
-        self, mock_check_packages, mock_check_snaps
-    ):
+    def test_all_available_before_timeout(self, mock_check_packages, mock_check_snaps):
         mock_check_snaps.side_effect = lambda specs, avail: avail.update(
             (spec, True) for spec in specs
         )

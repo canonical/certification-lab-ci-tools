@@ -24,9 +24,7 @@ def get_snap_info_from_store(snap_name: str) -> dict:
     headers = {"Snap-Device-Series": "16", "Snap-Device-Store": "ubuntu"}
     response = requests.get(url, headers=headers)
     if response.status_code != 200:
-        raise RuntimeError(
-            f"Failed to get info about {snap_name} from the snap store."
-        )
+        raise RuntimeError(f"Failed to get info about {snap_name} from the snap store.")
 
     return response.json()
 
@@ -105,9 +103,7 @@ def get_revision_at_offset(version_str: str, repo_path: str):
     tag_list = get_list_of_tags(repo_path)
     previous_tag = get_previous_tag(base_version, tag_list)
     history = get_history_since(previous_tag, repo_path)
-    print(
-        f"Checkout to {offset} commits after the preceding tag {previous_tag}"
-    )
+    print(f"Checkout to {offset} commits after the preceding tag {previous_tag}")
     # history is HEAD -> latest_tag(included)
     # reverse it so it tag -> HEAD
     history = list(reversed(history))

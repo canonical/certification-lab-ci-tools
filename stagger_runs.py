@@ -31,7 +31,9 @@ def main():
 
     pretty_deadline = pretty_m_s(sleeping_s)
 
-    print(textwrap.dedent("""
+    print(
+        textwrap.dedent(
+            """
     Staggering this run out to lower pressure on the lab network.
     This test run will start in {}.
 
@@ -39,7 +41,9 @@ def main():
     You want to skip this?
     - Restart the job with NO_STAGGER envvar
     - Kill this process, my PID is: {}
-    """.format(pretty_deadline, os.getpid())).strip())
+    """.format(pretty_deadline, os.getpid())
+        ).strip()
+    )
     print(flush=True)
 
     spinner = itertools.cycle(r"-\|/")

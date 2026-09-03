@@ -4,7 +4,6 @@ from typing import Optional, Sequence
 
 
 class CheckBoxConfiguration(ConfigParser):
-
     def __init__(self):
         super().__init__(delimiters=("=",))
 
@@ -32,10 +31,7 @@ class CheckBoxConfiguration(ConfigParser):
             self.write(file)
 
     def stack(
-        self,
-        paths: Sequence[Path],
-        output: Path,
-        description: Optional[str] = None
+        self, paths: Sequence[Path], output: Path, description: Optional[str] = None
     ):
         # stack *all* configuration files, in the specified order
         # (read is inconvenient, it doesn't mind non-existent files)

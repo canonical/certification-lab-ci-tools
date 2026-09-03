@@ -66,7 +66,7 @@ def optional_percent(string):
     >>> optional_percent('N/A')
     """
     try:
-        if string[-1] != '%':
+        if string[-1] != "%":
             return None
         # drop '%' suffix and divide by 100
         return float(string[:-1]) / 100.0
@@ -94,9 +94,9 @@ def currency(string):
     >>> currency('$-80.01')
     -80.01
     """
-    filtered = ''
+    filtered = ""
     for char in string:
-        if char in '0123456789-.':
+        if char in "0123456789-.":
             filtered += char
     try:
         return float(filtered)
@@ -105,45 +105,44 @@ def currency(string):
 
 
 def get_prebaked_kpis():
-    sheet_id = '11cbEwUsOCuv5Hs5RRh1VZZccZ-PDwA8rDdzbiyRkmUw'
+    sheet_id = "11cbEwUsOCuv5Hs5RRh1VZZccZ-PDwA8rDdzbiyRkmUw"
     gcli = pygsheets.authorize()
     sheet = gcli.open_by_key(sheet_id)
-    wsheet = sheet.worksheet_by_title('KPIs')
+    wsheet = sheet.worksheet_by_title("KPIs")
     all_vals = wsheet.get_all_values()
     kpis = dict()
     for row_num, row in enumerate(all_vals, start=1):
-        if row[0].lower() in ['iot overall', 'store overall', 'pc overall']:
-            lob = row[0].split(' ')[0].lower()
-            kpis['avg_{}_time_to_market'.format(lob)] = (
-                    optional_int(row[1]) or 0)
-            kpis['avg_{}_budget_variance'.format(lob)] = (
-                    optional_percent(row[2]) or 0)
-            kpis['avg_{}_scope_creep'.format(lob)] = (
-                    optional_int(row[3]) or 0)
-            kpis['avg_{}_nps'.format(lob)] = (
-                    optional_int(row[4]) or 0)
-            kpis['avg_{}_roi'.format(lob)] = (
-                    optional_percent(row[5]) or 0)
+        if row[0].lower() in ["iot overall", "store overall", "pc overall"]:
+            lob = row[0].split(" ")[0].lower()
+            kpis["avg_{}_time_to_market".format(lob)] = optional_int(row[1]) or 0
+            kpis["avg_{}_budget_variance".format(lob)] = optional_percent(row[2]) or 0
+            kpis["avg_{}_scope_creep".format(lob)] = optional_int(row[3]) or 0
+            kpis["avg_{}_nps".format(lob)] = optional_int(row[4]) or 0
+            kpis["avg_{}_roi".format(lob)] = optional_percent(row[5]) or 0
     return kpis
 
 
 def main():
     """Get stats and post measurements."""
     kpis = get_prebaked_kpis()
-    print('Posting measuremens:')
+    print("Posting measuremens:")
     pprint(kpis)
 
-    reqobj = {'database': 'certsandbox', 'measurements': [{
-        'measurement': 'project_kpis',
-        'time': int(time.time() * 10 ** 9),  # sec to nsec
-        'tags': {},
-        'fields': kpis,
-    }]}
-    response = requests.post('http://10.101.51.246:8000/influx', json=reqobj)
+    reqobj = {
+        "database": "certsandbox",
+        "measurements": [
+            {
+                "measurement": "project_kpis",
+                "time": int(time.time() * 10**9),  # sec to nsec
+                "tags": {},
+                "fields": kpis,
+            }
+        ],
+    }
+    response = requests.post("http://10.101.51.246:8000/influx", json=reqobj)
     if not response.ok:
-        raise SystemExit('Failed to post measurements:\n{}'.format(
-            response.text))
+        raise SystemExit("Failed to post measurements:\n{}".format(response.text))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
