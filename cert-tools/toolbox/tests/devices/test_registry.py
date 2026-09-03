@@ -10,20 +10,16 @@ class InterfaceA(DeviceInterface):
     """Test interface with no dependencies."""
 
 
-
 class InterfaceB(DeviceInterface):
     """Test interface with no dependencies."""
-
 
 
 class InterfaceC(DeviceInterface, requires=(InterfaceA,)):
     """Test interface that requires InterfaceA."""
 
 
-
 class InterfaceD(DeviceInterface, requires=(InterfaceA, InterfaceB)):
     """Test interface that requires both InterfaceA and InterfaceB."""
-
 
 
 class TestDeviceInterfaceRegistry:

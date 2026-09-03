@@ -11,15 +11,12 @@ class InterfaceA(DeviceInterface):
     """Simple test interface."""
 
 
-
 class InterfaceB(DeviceInterface):
     """Another simple test interface."""
 
 
-
 class InterfaceC(DeviceInterface, requires=(InterfaceA,)):
     """Test interface that requires InterfaceA."""
-
 
 
 class TestDeviceInitialization:

@@ -232,9 +232,7 @@ def add_ppa_key_gpg(key: str) -> str:
     os.makedirs(DEFAULT_KEYRING_DIR, exist_ok=True)
 
     keyring_file = os.path.join(DEFAULT_KEYRING_DIR, f"{key}.gpg")
-    keyserver_url = (
-        f"https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x{key}"
-    )
+    keyserver_url = f"https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x{key}"
 
     # Use a temporary directory for downloading the armored key
     with tempfile.TemporaryDirectory() as tmpdir:

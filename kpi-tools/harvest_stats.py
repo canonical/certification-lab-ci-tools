@@ -198,9 +198,7 @@ class StatHarvester:
             }
             response = requests.post(bork_url, json=request)
             if not response:
-                print(
-                    f"Couldn't push measurements:\n{response}: {response.text}"
-                )
+                print(f"Couldn't push measurements:\n{response}: {response.text}")
 
     def dump_last_stats(self):
         last_state = {

@@ -237,7 +237,9 @@ class SyncTool:
                     def att_hash(att):
                         hash_cache = {}
                         if att.self_link not in hash_cache:
-                            hash_cache[att.self_link] = f"{att.title}-{hashlib.sha1(att.data.open().read()).hexdigest()}"
+                            hash_cache[att.self_link] = (
+                                f"{att.title}-{hashlib.sha1(att.data.open().read()).hexdigest()}"
+                            )
                         return hash_cache[att.self_link]
 
                     new_content += ", ".join([att_hash(a) for a in msg.bug_attachments])

@@ -9,10 +9,8 @@ class InterfaceA(DeviceInterface):
     """Simple test interface."""
 
 
-
 class InterfaceB(DeviceInterface):
     """Another simple test interface."""
-
 
 
 class TestDeviceProcess:

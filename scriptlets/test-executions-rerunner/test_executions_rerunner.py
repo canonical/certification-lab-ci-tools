@@ -22,6 +22,7 @@ from requests.exceptions import HTTPError
 from urllib3.util import Retry
 
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 requests = Session()
@@ -156,7 +157,7 @@ class RequestProcessor(ABC):
             for field, value in post_arguments._asdict().items()
             if value is not None
         }
-        logging.info("POST %s", post_arguments_dict)
+        logger.info("POST %s", post_arguments_dict)
         response = requests.post(
             **{**self.constant_post_arguments, **post_arguments_dict}
         )
@@ -319,7 +320,7 @@ class Rerunner:
         Return rerun requests retrieved from Test Observer
         """
         rerun_requests = self.test_observer.get()
-        logging.info("Received the following rerun requests:\n%s", str(rerun_requests))
+        logger.info("Received the following rerun requests:\n%s", str(rerun_requests))
         return rerun_requests
 
     def process_rerun_requests(self, rerun_requests: list[dict]) -> ProcessedRequests:
@@ -335,7 +336,7 @@ class Rerunner:
             try:
                 post_arguments = self.processor.process(rerun_request)
             except RequestProccesingError:
-                logging.warning(
+                logger.warning(
                     "%s is unable to process this rerun request:\n%s",
                     type(self.processor).__name__,
                     str(rerun_request),
@@ -359,7 +360,7 @@ class Rerunner:
                 self.processor.submit(post_arguments)
             except HTTPError as error:
                 # unable to POST: log the error
-                logging.error(
+                logger.error(
                     "Response %s posting %s to %s",
                     error,
                     str(post_arguments),
@@ -380,7 +381,7 @@ class Rerunner:
             return
         # sort the execution ids so that they are easier to locate in the log
         self.test_observer.delete(deleted := sorted(execution_ids))
-        logging.info(
+        logger.info(
             "Deleted rerun requests with execution ids: %s",
             ", ".join(map(str, deleted)),
         )
@@ -405,10 +406,12 @@ def create_rerunner_from_args():
         help="Specify which request rerun processor to use",
     )
     parser.add_argument(
-        "--family", help="Restrict processing to a specific family of artifacts"
+        "--family",
+        help="Restrict processing to a specific family of artifacts",
     )
     parser.add_argument(
-        "--limit", help="Restrict processing to a specific number of rerun requests"
+        "--limit",
+        help="Restrict processing to a specific number of rerun requests",
     )
     # only for Github processor but too simple to justify using subparsers
     parser.add_argument("--repo", help="Name of Github repository")
@@ -416,7 +419,8 @@ def create_rerunner_from_args():
 
     if args.processor == "jenkins":
         processor = JenkinsProcessor(
-            environ.get("JENKINS_USERNAME") or "admin", environ["JENKINS_API_TOKEN"]
+            environ.get("JENKINS_USERNAME") or "admin",
+            environ["JENKINS_API_TOKEN"],
         )
     else:
         processor = GithubProcessor(environ["GH_TOKEN"], repo=args.repo)
