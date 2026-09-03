@@ -54,7 +54,19 @@ class CheckboxVersionHelper:
         """Find the most recent tag before the given version."""
         return next((tag for tag in tags if tag < version), None)
 
-    def get_commit_for_version(self, version: str):
+    def get_release_branch(self, checkbox_major: str) -> str:
+        """Get the release/XX branch for the current checkbox major if any
+
+        Some versions of Checkbox are isolated to their own branch, this
+        returns the name of the appropriate branch or `main` if none.
+        """
+        isolated = {"16", "24"}
+        if checkbox_major in isolated:
+            logger.info(f"Using release branch release/{checkbox_major}")
+            return f"release/{checkbox_major}"
+        return "main"
+
+    def get_commit_for_version(self, version: str, os_version: str):
         """Resolve a Checkbox version to its corresponding commit SHA."""
         release, offset = self.get_release_and_offset(version)
         tags = self.get_tags()
@@ -63,5 +75,6 @@ class CheckboxVersionHelper:
             raise ValueError(
                 f"Unable to locate a previous tag for the version: {release}"
             )
-        comparison = self.repo.compare(f"v{previous}~1", "main")
+        release_branch = self.get_release_branch(os_version)
+        comparison = self.repo.compare(f"v{previous}~1", release_branch)
         return comparison.commits[offset].sha
