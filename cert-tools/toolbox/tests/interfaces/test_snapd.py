@@ -2,9 +2,9 @@
 
 import pytest
 from invoke import Result
-from toolbox.interfaces.snapd import SnapdAPIClient, SnapdAPIError
 
 from tests.devices.trivial import TrivialDevice
+from toolbox.interfaces.snapd import SnapdAPIClient, SnapdAPIError
 
 
 class TestRequests:

@@ -1,6 +1,7 @@
 """Tests for the toolbox.devices.registry module."""
 
 import pytest
+
 from toolbox.devices.registry import DeviceInterfaceRegistry
 from toolbox.interfaces import DeviceInterface, DeviceInterfaceError
 

@@ -3,6 +3,7 @@ from pathlib import Path
 
 from snapstore.client import SnapstoreClient
 from snapstore.craft import create_base_client
+
 from toolbox.checkbox.helpers.connector import Blacklist
 from toolbox.checkbox.installers.snaps import (
     TOKEN_ENVIRONMENT_VARIABLE,

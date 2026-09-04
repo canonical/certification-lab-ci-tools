@@ -50,12 +50,12 @@ class DeviceInterfaceRegistry:
 
     def _check_requirements(self):
         """Validate that all interface dependencies are satisfied."""
-        requirements = set(
+        requirements = {
             requirement.__name__
             for interface in self
             for requirement in interface.requires
-        )
-        registered = set(identifier for identifier in self.registry)
+        }
+        registered = set(self.registry)
         missing = requirements - registered
         if missing:
             missing_message = ", ".join(sorted(missing))

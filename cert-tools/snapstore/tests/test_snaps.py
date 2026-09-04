@@ -1,4 +1,5 @@
 from pytest import mark, raises
+
 from snapstore.snaps import SnapChannel, SnapSpecifier
 
 

@@ -1,6 +1,7 @@
 """Tests for CheckboxRuntimeHelper."""
 
 import pytest
+
 from toolbox.checkbox.helpers.runtime import CheckboxRuntimeHelper
 from toolbox.entities.channels import Channel
 from toolbox.entities.snaps import SnapSpecifier

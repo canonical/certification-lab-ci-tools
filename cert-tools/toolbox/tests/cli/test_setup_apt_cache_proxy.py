@@ -2,6 +2,7 @@
 
 import pytest
 from invoke import Result
+
 from toolbox.cli import setup_apt_cache_proxy
 from toolbox.cli.setup_apt_cache_proxy import (
     generate_proxy_config,

@@ -1,6 +1,7 @@
 """Checkbox installer for deb-based installations."""
 
 import logging
+from typing import ClassVar
 
 from toolbox.checkbox.installers import CheckboxInstaller, CheckboxInstallerError
 from toolbox.devices import Device
@@ -13,7 +14,7 @@ logger = logging.getLogger(__name__)
 class CheckboxDebsInstaller(CheckboxInstaller):
     """Installer for Checkbox packages on a device."""
 
-    requirements = [
+    requirements: ClassVar[list[str]] = [
         "fswebcam",
         "fwts",
         "gir1.2-clutter-1.0",
@@ -26,7 +27,7 @@ class CheckboxDebsInstaller(CheckboxInstaller):
         "xorg-dev",
     ]
 
-    required_providers = [
+    required_providers: ClassVar[list[str]] = [
         "checkbox-ng",
         "checkbox-provider-base",
         "checkbox-provider-resource",
@@ -34,7 +35,7 @@ class CheckboxDebsInstaller(CheckboxInstaller):
         "python3-checkbox-ng",
     ]
 
-    repositories = [
+    repositories: ClassVar[list[str]] = [
         "ppa:colin-king/ppa",
         "ppa:colin-king/stress-ng",
         "ppa:firmware-testing-team/ppa-fwts-stable",

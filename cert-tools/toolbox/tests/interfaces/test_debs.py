@@ -1,11 +1,11 @@
 """Tests for the toolbox.interfaces.debs module."""
 
 from invoke import Result
+
+from tests.devices.trivial import TrivialDevice
 from toolbox.interfaces.debs import DebInterface
 from toolbox.results import BooleanResult
 from toolbox.retries import Linear
-
-from tests.devices.trivial import TrivialDevice
 
 
 class TestDebAction:

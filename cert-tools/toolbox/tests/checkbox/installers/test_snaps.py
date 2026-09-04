@@ -4,6 +4,8 @@ import os
 
 import pytest
 from invoke import Result
+
+from tests.devices.trivial import TrivialDevice
 from toolbox.checkbox.installers.snaps import CheckboxSnapsInstaller
 from toolbox.entities.channels import Channel
 from toolbox.entities.connections import SnapConnection
@@ -12,8 +14,6 @@ from toolbox.interfaces.reboot import RebootInterface
 from toolbox.interfaces.snapd import SnapdAPIClient
 from toolbox.interfaces.snaps import SnapInstallError, SnapInterface
 from toolbox.interfaces.status import SystemStatusInterface
-
-from tests.devices.trivial import TrivialDevice
 
 
 class TestCheckboxSnapsInstaller:

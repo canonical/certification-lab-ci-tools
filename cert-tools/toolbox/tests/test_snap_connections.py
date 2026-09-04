@@ -194,7 +194,7 @@ class TestConnector:
 
         # Should only find one connection from allowed-snap
         assert len(connections) == 1
-        connection = list(connections)[0]
+        connection = next(iter(connections))
         assert connection.plug_snap == "allowed-snap"
 
     def test_process_multiple_slots_per_plug(self):
@@ -725,7 +725,7 @@ class TestMainFunction:
 
         # Verify only the allowed connection was returned
         assert len(connections) == 1
-        connection = list(connections)[0]
+        connection = next(iter(connections))
         assert connection.plug_snap == "allowed-snap"
 
         # Verify the blacklist log message was generated

@@ -23,7 +23,7 @@ def main():
     parser.add_argument("--delay", type=int, default=10, help="Delay between retries")
     args = parser.parse_args()
 
-    allowed = set(args.allow or tuple())
+    allowed = set(args.allow or ())
     if args.allow_degraded:
         allowed.add("degraded")
     if args.allow_starting:

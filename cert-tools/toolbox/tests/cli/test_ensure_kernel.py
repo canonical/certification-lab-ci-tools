@@ -2,6 +2,7 @@
 
 import pytest
 from invoke import Result
+
 from toolbox.cli import ensure_kernel
 from toolbox.cli.ensure_kernel import (
     main,

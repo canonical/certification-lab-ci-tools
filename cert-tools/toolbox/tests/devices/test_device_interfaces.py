@@ -1,9 +1,9 @@
 """Tests for Device initialization and interface attachment."""
 
 import pytest
-from toolbox.interfaces import DeviceInterface, DeviceInterfaceError
 
 from tests.devices.trivial import TrivialDevice
+from toolbox.interfaces import DeviceInterface, DeviceInterfaceError
 
 
 # Test interfaces
@@ -73,4 +73,4 @@ class TestDeviceInitialization:
         with pytest.raises(
             DeviceInterfaceError, match="'InterfaceA' is not attached to a device"
         ):
-            interface.device
+            _ = interface.device

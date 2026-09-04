@@ -1,9 +1,9 @@
 """Tests for the toolbox.interfaces.reboot module."""
 
 from invoke import Result
-from toolbox.interfaces.reboot import RebootInterface
 
 from tests.devices.trivial import TrivialDevice
+from toolbox.interfaces.reboot import RebootInterface
 
 
 class TestReboot:

@@ -4,6 +4,7 @@ from pathlib import Path
 from textwrap import dedent
 
 import pytest
+
 from toolbox.checkbox.helpers.connector import (
     Blacklist,
     DifferentSnaps,
@@ -363,10 +364,10 @@ class TestSnapConnector:
         }
 
         connector = SnapConnector()
-        connections, messages = connector.process(data)
+        connections, _messages = connector.process(data)
 
         assert len(connections) == 1
-        connection = list(connections)[0]
+        connection = next(iter(connections))
         assert str(connection) == "disconnected-plug-snap:plug/slot-snap:slot"
 
     def test_process_same_snap_rejection(self):
@@ -383,7 +384,7 @@ class TestSnapConnector:
         }
 
         connector = SnapConnector()
-        connections, messages = connector.process(data)
+        connections, _messages = connector.process(data)
 
         assert len(connections) == 0
 
@@ -410,7 +411,7 @@ class TestSnapConnector:
         }
 
         connector = SnapConnector()
-        connections, messages = connector.process(data)
+        connections, _messages = connector.process(data)
 
         assert len(connections) == 2
 
@@ -436,7 +437,7 @@ class TestSnapConnector:
         }
 
         connector = SnapConnector()
-        connections, messages = connector.process(data)
+        connections, _messages = connector.process(data)
 
         assert len(connections) == 0
 
@@ -473,7 +474,7 @@ class TestSnapConnector:
 
         select_snaps = SelectSnaps(["checkbox", "firefox"])
         connector = SnapConnector(predicates=[select_snaps])
-        connections, messages = connector.process(data)
+        connections, _messages = connector.process(data)
 
         assert len(connections) == 2
         plug_snaps = {conn.plug_snap for conn in connections}

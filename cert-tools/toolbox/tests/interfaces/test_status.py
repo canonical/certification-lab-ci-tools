@@ -2,11 +2,11 @@
 
 import pytest
 from invoke import Result
+
+from tests.devices.trivial import TrivialDevice
 from toolbox.interfaces.status import SystemStatusInterface
 from toolbox.results import BooleanResult
 from toolbox.retries import Linear
-
-from tests.devices.trivial import TrivialDevice
 
 
 class TestGetStatus:

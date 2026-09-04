@@ -5,6 +5,7 @@ import logging
 import os
 
 from snapstore.client import SnapstoreClient
+
 from toolbox.checkbox.helpers.connector import Predicate, SelectSnaps, SnapConnector
 from toolbox.checkbox.helpers.runtime import CheckboxRuntimeHelper
 from toolbox.checkbox.installers import CheckboxInstaller
@@ -130,10 +131,7 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
             with contextlib.suppress(KeyError):
                 frontends.remove(conn["snap"])
 
-        if frontends:
-            return False
-
-        return True
+        return not frontends
 
     def configure_agent(self, agent: SnapSpecifier):
         """Configure checkbox snap agent."""
@@ -195,7 +193,7 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
             policy=Linear(times=30, delay=10),
         )
 
-        if False and self.custom_frontend_interface():  # XXX currently broken
+        if False:  # XXX currently broken
             logger.info("Using new providers interface with runtime agent")
             agent = self.runtime
         else:

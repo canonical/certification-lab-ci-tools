@@ -2,7 +2,6 @@
 
 from abc import ABC
 from collections.abc import Iterable
-from typing import Type
 
 
 class DeviceInterfaceError(AttributeError):

@@ -52,7 +52,7 @@ def main():
 
     try:
         device = LabDevice()
-    except Exception as error:
+    except RuntimeError as error:
         print(f"ERROR: {error}")
         sys.exit(1)
 

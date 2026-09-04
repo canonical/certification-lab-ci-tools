@@ -1,5 +1,6 @@
 from craft_store.errors import CraftStoreError
 from pytest import raises
+
 from snapstore.craft import (
     create_base_client,
     create_http_client,
