@@ -3,23 +3,24 @@ import base64
 import pytest
 import requests_mock
 from pytest import fixture
+
 from test_executions_rerunner import (
     GithubProcessor,
     JenkinsProcessor,
     RequestProccesingError,
     Rerunner,
-    TestObserverInterface,
 )
+from test_executions_rerunner import TestObserverInterface as TOInterface
 
 
 def test_test_observer_interface_params():
-    interface = TestObserverInterface()
+    interface = TOInterface()
     assert interface.create_get_params() == {}
-    interface = TestObserverInterface(family="deb")
+    interface = TOInterface(family="deb")
     assert interface.create_get_params() == {"family": "deb"}
-    interface = TestObserverInterface(limit=100)
+    interface = TOInterface(limit=100)
     assert interface.create_get_params() == {"limit": 100}
-    interface = TestObserverInterface(family="snap", limit=1000)
+    interface = TOInterface(family="snap", limit=1000)
 
 
 # processors for rerun requests, i.e. interfaces towards Jenkins and Github
@@ -59,8 +60,7 @@ def test_jenkins_empty_ci_link(jenkins):
 @pytest.mark.parametrize(
     "ci_link",
     [
-        "http://10.102.156.15:8080/job/fake-job/"
-        "http://10.102.156.15:8080/job/fake-job/1/2"
+        "http://10.102.156.15:8080/job/fake-job/",
         "https://github.com/canonical/fake-repo/actions/runs/13/job/39",
         "invalid-url",
     ],
@@ -204,12 +204,12 @@ expected_processed_per_processor = {
 
 @pytest.fixture
 def rerunner_jenkins(jenkins):
-    return Rerunner(TestObserverInterface(), jenkins)
+    return Rerunner(TOInterface(), jenkins)
 
 
 @pytest.fixture
 def rerunner_github(github_with_repo):
-    return Rerunner(TestObserverInterface(), github_with_repo)
+    return Rerunner(TOInterface(), github_with_repo)
 
 
 def test_does_nothing_when_no_reruns_requested(rerunner_jenkins):
@@ -217,10 +217,10 @@ def test_does_nothing_when_no_reruns_requested(rerunner_jenkins):
         catch_all = mocker.register_uri(
             requests_mock.ANY, requests_mock.ANY, status_code=500
         )
-        load_matcher = mocker.get(TestObserverInterface().reruns_endpoint, json=[])
+        load_matcher = mocker.get(TOInterface().reruns_endpoint, json=[])
         rerunner_jenkins.run()
     assert not catch_all.called
-    assert load_matcher.called_once
+    assert load_matcher.call_count == 1
 
 
 @pytest.mark.parametrize(
@@ -257,7 +257,7 @@ def test_end_to_end(request, rerunner_name, expected_successful):
         )
         # this will be used to mock-load the rerun requests
         load_matcher = mocker.get(
-            TestObserverInterface().reruns_endpoint,
+            TOInterface().reruns_endpoint,
             status_code=200,
             json=rerun_requests,
         )
@@ -279,7 +279,7 @@ def test_end_to_end(request, rerunner_name, expected_successful):
         # this will be used to mock-delete the rerun requests that were
         # processed and serviced successfully
         delete_matcher = mocker.delete(
-            TestObserverInterface().reruns_endpoint,
+            TOInterface().reruns_endpoint,
             additional_matcher=lambda request: (
                 request.json() == {"test_execution_ids": expected_successful}
             ),
@@ -287,18 +287,18 @@ def test_end_to_end(request, rerunner_name, expected_successful):
         rerunner.run()
 
     assert not catch_all.called
-    assert load_matcher.called_once
-    assert all(submit_matcher.called_once for submit_matcher in submit_matchers)
-    assert delete_matcher.called_once
+    assert load_matcher.call_count == 1
+    assert all(submit_matcher.call_count == 1 for submit_matcher in submit_matchers)
+    assert delete_matcher.call_count == 1
 
 
 def test_test_observer_interface_no_auth_headers():
-    interface = TestObserverInterface()
+    interface = TOInterface()
     assert interface.create_auth_headers() == {}
 
 
 def test_test_observer_interface_get_sends_auth_header():
-    interface = TestObserverInterface(api_token="mytoken")
+    interface = TOInterface(api_token="mytoken")
     with requests_mock.Mocker() as mocker:
         matcher = mocker.get(
             interface.reruns_endpoint,
@@ -306,15 +306,15 @@ def test_test_observer_interface_get_sends_auth_header():
             json=[],
         )
         interface.get()
-    assert matcher.called_once
+    assert matcher.call_count == 1
 
 
 def test_test_observer_interface_delete_sends_auth_header():
-    interface = TestObserverInterface(api_token="mytoken")
+    interface = TOInterface(api_token="mytoken")
     with requests_mock.Mocker() as mocker:
         matcher = mocker.delete(
             interface.reruns_endpoint,
             request_headers={"Authorization": "Bearer mytoken"},
         )
         interface.delete([1, 2])
-    assert matcher.called_once
+    assert matcher.call_count == 1
