@@ -61,10 +61,11 @@ to check if both snaps and packages are available would be:
 import argparse
 import sys
 import time
-from typing import NamedTuple
+from typing import Dict, List, NamedTuple
 
 import requests
 import yaml
+
 from snap_info_utility import get_snap_info_from_store
 
 
@@ -88,7 +89,7 @@ class PackageSpec(NamedTuple):
     arch: str
 
 
-def get_snap_specs(yaml_content: dict, version: str) -> list[SnapSpec]:
+def get_snap_specs(yaml_content: dict, version: str) -> List[SnapSpec]:
     """
     Create a list of SnapSpec objects from the yaml content.
     :param yaml_content: file containing the snap requirements
@@ -141,8 +142,8 @@ def is_snap_available(snap_spec: SnapSpec, store_response: dict) -> bool:
 
 
 def check_snaps_availability(
-    snap_specs: list[SnapSpec],
-    snaps_available: dict[SnapSpec, bool],
+    snap_specs: List[SnapSpec],
+    snaps_available: Dict[SnapSpec, bool],
 ) -> None:
     print("Checking if the snaps are available ...")
     # Record of snaps for which we've already fetched the data from the store.
@@ -188,7 +189,7 @@ def check_snaps_availability(
         print("All snaps were found.")
 
 
-def get_package_specs(yaml_content: dict, version: str) -> list[PackageSpec]:
+def get_package_specs(yaml_content: dict, version: str) -> List[PackageSpec]:
     """
     Create a list of PackageSpec objects from the yaml content.
     :param yaml_content: file containing the package requirements
@@ -218,8 +219,8 @@ def get_package_specs(yaml_content: dict, version: str) -> list[PackageSpec]:
 
 
 def check_packages_availability(
-    package_specs: list[PackageSpec],
-    packages_available: dict[PackageSpec, bool],
+    package_specs: List[PackageSpec],
+    packages_available: Dict[PackageSpec, bool],
 ) -> None:
     print("Checking if the packages are available ...")
     # avoid re-querying LP for the same deb. Leaving the function
