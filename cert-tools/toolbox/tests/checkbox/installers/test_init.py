@@ -3,8 +3,8 @@
 import pytest
 from invoke import Result
 
-from toolbox.checkbox.installers import CheckboxInstaller, CheckboxInstallerError
 from tests.devices.trivial import TrivialDevice
+from toolbox.checkbox.installers import CheckboxInstaller, CheckboxInstallerError
 
 
 class ConcreteInstaller(CheckboxInstaller):
@@ -17,7 +17,6 @@ class ConcreteInstaller(CheckboxInstaller):
 
     def install_on_device(self, *args, **kwargs):
         """Mock installation on device."""
-        pass
 
 
 class TestCheckboxInstaller:

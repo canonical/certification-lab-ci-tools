@@ -1,12 +1,10 @@
 """Base classes for Checkbox installation on devices."""
 
-from abc import ABC, abstractmethod
 import logging
-
+from abc import ABC, abstractmethod
 
 from toolbox.checkbox.helpers.github import CheckboxVersionHelper
 from toolbox.devices import Device
-
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +22,7 @@ class CheckboxInstaller(ABC):
 
     @property
     @abstractmethod
-    def checkbox_cli(self, *args, **kwargs) -> str:  # pragma: no cover
+    def checkbox_cli(self) -> str:  # pragma: no cover
         """Return the command to invoke the Checkbox CLI on the device."""
         raise NotImplementedError
 

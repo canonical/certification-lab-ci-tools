@@ -2,10 +2,9 @@
 
 import logging
 import os
+from collections.abc import Iterable
 
-from typing import Iterable
-
-from github import Github, Auth
+from github import Auth, Github
 from packaging.version import Version
 
 GH_TOKEN_ENV_VAR = "GITHUB_TOKEN"

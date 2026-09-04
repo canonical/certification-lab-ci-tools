@@ -5,8 +5,8 @@ from invoke import Result
 
 from toolbox.cli import ensure_kernel
 from toolbox.cli.ensure_kernel import (
-    normalize_version,
     main,
+    normalize_version,
     parse_booted_version,
 )
 

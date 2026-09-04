@@ -20,8 +20,8 @@
 """Push measurements stored in JSON file to InfluxDB."""
 
 import json
-
 from argparse import ArgumentParser
+
 from influxdb import InfluxDBClient
 
 
@@ -42,76 +42,73 @@ def validate_point(data_point):
         (empty list on everything being ok)
     """
     if not isinstance(data_point, dict):
-        return ['Data point {} is not a dict'.format(data_point)]
+        return [f"Data point {data_point} is not a dict"]
     mandatory = {
-        'measurement': [str],
-        'fields': [dict],
+        "measurement": [str],
+        "fields": [dict],
     }
     optional = {
-        'tags': [dict],
-        'time': [int, str],
+        "tags": [dict],
+        "time": [int, str],
     }
     errors = []
     for name, types in mandatory.items():
         if name not in data_point.keys():
             errors.append(
-                "Problem with data point: {}. '{}' field missing".format(
-                    data_point, name))
+                f"Problem with data point: {data_point}. '{name}' field missing"
+            )
             continue
         if not isanyinstance(data_point[name], types):
             errors.append(
-                "Problem with data point: {}. '{}' is not a type of {}".format(
-                    data_point, name, types))
+                f"Problem with data point: {data_point}. '{name}' is not a type of {types}"
+            )
     for name, types in optional.items():
         if name in data_point.keys():
             if not isanyinstance(data_point[name], types):
                 errors.append(
-                    "Problem with data point: {}. "
-                    "'{}' is not a type of {}".format(
-                        data_point, name, types))
+                    f"Problem with data point: {data_point}. '{name}' is not a type of {types}"
+                )
     return errors
 
 
 def main():
     """Entry point."""
     parser = ArgumentParser()
+    parser.add_argument("--host", help="Influx host ot push to", required=True)
     parser.add_argument(
-        '--host', help='Influx host ot push to', required=True)
+        "--username", "-u", help="Username for the Influx client", required=True
+    )
     parser.add_argument(
-        '--username', '-u', help='Username for the Influx client',
-        required=True)
+        "--password", "-p", help="Password for the Influx client", required=True
+    )
+    parser.add_argument("--database", "-d", help="Database to use", required=True)
     parser.add_argument(
-        '--password', '-p', help='Password for the Influx client',
-        required=True)
-    parser.add_argument(
-        '--database', '-d', help='Database to use', required=True)
-    parser.add_argument(
-        'measurements', help='JSON file with the measurements',
-        metavar='file.json')
+        "measurements", help="JSON file with the measurements", metavar="file.json"
+    )
     args = parser.parse_args()
     # look for the port in the --host option
-    split = args.host.split(':')
+    split = args.host.split(":")
     host = split[0]
     port = 8086 if len(split) == 1 else int(split[1])
     errors = []
     try:
-        with open(args.measurements, 'rt') as measurements_file:
+        with open(args.measurements, "rt") as measurements_file:
             data = json.load(measurements_file)
             # if there's only one object we need to listify it
             datapoints = data if isinstance(data, list) else [data]
             for datapoint in datapoints:
                 errors += validate_point(datapoint)
     except json.JSONDecodeError as exc:
-        errors.append('JSON decode error: {}'.format(str(exc)))
+        errors.append(f"JSON decode error: {exc!s}")
     if errors:
-        raise SystemExit('\n'.join(errors))
+        raise SystemExit("\n".join(errors))
 
     try:
         client = InfluxDBClient(host, port, args.username, args.password)
         client.write_points(datapoints, database=args.database)
     except Exception as exc:
-        raise SystemExit("Problem with pushing the data: {}".format(exc))
+        raise SystemExit(f"Problem with pushing the data: {exc}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -4,14 +4,16 @@ Get version and revision data for snaps we care about testing
 """
 
 import json
-import requests
 import sys
-import yaml
 from argparse import ArgumentParser
 
+import requests
+import yaml
+
 parser = ArgumentParser()
-parser.add_argument("--config", "-c", required=True,
-                    help="Yaml file with snap names and store data")
+parser.add_argument(
+    "--config", "-c", required=True, help="Yaml file with snap names and store data"
+)
 args = parser.parse_args()
 
 with open(args.config) as f:
@@ -29,9 +31,8 @@ snap:
 """
 mysnapdict = dict()
 for snap, store in SNAPS:
-    url = "https://api.snapcraft.io/v2/snaps/info/{}?fields=version,revision,snap-yaml".format(snap)
-    headers = {"Snap-Device-Series": "16",
-               "Snap-Device-Store": store}
+    url = f"https://api.snapcraft.io/v2/snaps/info/{snap}?fields=version,revision,snap-yaml"
+    headers = {"Snap-Device-Series": "16", "Snap-Device-Store": store}
     a = requests.get(url, headers=headers)
     j = a.json()
     if not hasattr(mysnapdict, snap):

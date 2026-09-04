@@ -22,7 +22,6 @@ import re
 import subprocess
 import tempfile
 import textwrap
-from typing import List, Optional
 from urllib.parse import urlparse
 
 logging.basicConfig(level=logging.INFO)
@@ -33,7 +32,7 @@ UBUNTU_RELEASE = 25
 DEFAULT_KEYRING_DIR = "/etc/apt/keyrings"
 
 
-def neatly_run_command(cmd: List[str]) -> str:
+def neatly_run_command(cmd: list[str]) -> str:
     """
     This command tries to run command and if the command fails it will log the
     error and exit the program.
@@ -41,14 +40,10 @@ def neatly_run_command(cmd: List[str]) -> str:
     try:
         return subprocess.check_output(cmd, universal_newlines=True)
     except FileNotFoundError as exc:
-        raise SystemExit(
-            "Command not found: {}".format(" ".join(cmd))
-        ) from exc
+        raise SystemExit("Command not found: {}".format(" ".join(cmd))) from exc
     except subprocess.CalledProcessError as exc:
         raise SystemExit(
-            "Problem encountered when running {}: {}".format(
-                " ".join(cmd), exc
-            )
+            "Problem encountered when running {}: {}".format(" ".join(cmd), exc)
         ) from exc
 
 
@@ -59,9 +54,7 @@ def guess_ubuntu_codename() -> str:
     The codename is guessed by running the lsb_release command.
     """
     logging.info("Guessing Ubuntu codename...")
-    codename = neatly_run_command(
-        ["lsb_release", "--codename", "--short"]
-    ).strip()
+    codename = neatly_run_command(["lsb_release", "--codename", "--short"]).strip()
     logging.info("Ubuntu codename guessed: %s", codename)
     return codename
 
@@ -73,9 +66,7 @@ def guess_ubuntu_release() -> int:
     The release is guessed by running the lsb_release command.
     """
     logging.info("Guessing Ubuntu release...")
-    release = neatly_run_command(
-        ["lsb_release", "--release", "--short"]
-    ).strip()
+    release = neatly_run_command(["lsb_release", "--release", "--short"]).strip()
     logging.info("Ubuntu release guessed: %s", release)
     # Only returning the major release number
     return int(release.split(".")[0])
@@ -114,7 +105,7 @@ def slugify(string: str) -> str:
     >>> slugify(r"a/b\\:*?\\"<>| ")
     'a-b----------'
     """
-    return re.sub(r'[\/\\:*?"<>| ]', '-', string)
+    return re.sub(r'[\/\\:*?"<>| ]', "-", string)
 
 
 def create_apt_auth_file(ppa: str, login: str, password: str) -> None:
@@ -134,7 +125,7 @@ def create_apt_auth_file(ppa: str, login: str, password: str) -> None:
         """
     ).format(f"{host}/{path}", login, password)
 
-    auth_file_path = "/etc/apt/auth.conf.d/ppa-{}.conf".format(ppa_name)
+    auth_file_path = f"/etc/apt/auth.conf.d/ppa-{ppa_name}.conf"
     if os.path.exists(auth_file_path):
         logging.warning("Credentials file already exists: %s", auth_file_path)
         logging.warning("Not overwriting it.")
@@ -171,11 +162,11 @@ def parse_ppa_url(url: str) -> str:
     host = parsed_url.netloc
     path = parsed_url.path
     if not path.startswith("/"):
-        raise ValueError("URL is not a PPA address: {}".format(url))
+        raise ValueError(f"URL is not a PPA address: {url}")
     return host, path[1:]
 
 
-def add_ppa_to_sources_list(ppa: str, keyring_file: Optional[str]) -> None:
+def add_ppa_to_sources_list(ppa: str, keyring_file: str | None) -> None:
     """
     Add the PPA to the sources.list file.
 
@@ -184,7 +175,7 @@ def add_ppa_to_sources_list(ppa: str, keyring_file: Optional[str]) -> None:
     """
     _, ppa_path = parse_ppa_url(ppa)
     ppa_name = slugify(ppa_path)
-    sources_list_file = "/etc/apt/sources.list.d/{}.list".format(ppa_name)
+    sources_list_file = f"/etc/apt/sources.list.d/{ppa_name}.list"
     release_codename = guess_ubuntu_codename()
     release = guess_ubuntu_release()
     if release >= UBUNTU_RELEASE and keyring_file:
@@ -193,7 +184,7 @@ def add_ppa_to_sources_list(ppa: str, keyring_file: Optional[str]) -> None:
             deb [signed-by={keyring_file}] {ppa} {release_codename} main
             deb-src [signed-by={keyring_file}] {ppa} {release_codename} main
             """
-        ).format(keyring_file=keyring_file,ppa=ppa, release_codename=release_codename)
+        ).format(keyring_file=keyring_file, ppa=ppa, release_codename=release_codename)
     else:
         contents = textwrap.dedent(
             """
@@ -203,9 +194,7 @@ def add_ppa_to_sources_list(ppa: str, keyring_file: Optional[str]) -> None:
         ).format(ppa=ppa, release_codename=release_codename)
 
     if os.path.exists(sources_list_file):
-        logging.warning(
-            "Sources list file already exists: %s", sources_list_file
-        )
+        logging.warning("Sources list file already exists: %s", sources_list_file)
         logging.warning("Not overwriting it.")
     else:
         with open(sources_list_file, "wt", encoding="utf-8") as src_list_file:
@@ -213,7 +202,7 @@ def add_ppa_to_sources_list(ppa: str, keyring_file: Optional[str]) -> None:
         logging.info("Created sources list file: %s", sources_list_file)
 
 
-def add_ppa_key(key: str) -> Optional[str]:
+def add_ppa_key(key: str) -> str | None:
     """
     Add the PPA's key to the system.
 
@@ -242,10 +231,8 @@ def add_ppa_key_gpg(key: str) -> str:
     # Create the keyring directory if it doesn't exist
     os.makedirs(DEFAULT_KEYRING_DIR, exist_ok=True)
 
-    keyring_file = os.path.join(DEFAULT_KEYRING_DIR, "{}.gpg".format(key))
-    keyserver_url = (
-        "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x{}"
-    ).format(key)
+    keyring_file = os.path.join(DEFAULT_KEYRING_DIR, f"{key}.gpg")
+    keyserver_url = f"https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x{key}"
 
     # Use a temporary directory for downloading the armored key
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -271,9 +258,7 @@ def add_ppa_key_gpg(key: str) -> str:
 
 def main() -> None:
     """The entry point of the program."""
-    parser = argparse.ArgumentParser(
-        description="Add a private PPA to the system."
-    )
+    parser = argparse.ArgumentParser(description="Add a private PPA to the system.")
     parser.add_argument("ppa", help="The URL of the PPA to add.")
     parser.add_argument("login", help="The login to use for the PPA.")
     parser.add_argument("password", help="The password to use for the PPA.")

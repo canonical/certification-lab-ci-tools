@@ -3,17 +3,18 @@ from pathlib import Path
 
 from snapstore.client import SnapstoreClient
 from snapstore.craft import create_base_client
+
+from toolbox.checkbox.helpers.connector import Blacklist
 from toolbox.checkbox.installers.snaps import (
-    CheckboxSnapsInstaller,
     TOKEN_ENVIRONMENT_VARIABLE,
+    CheckboxSnapsInstaller,
 )
 from toolbox.devices import LocalHost
 from toolbox.devices.lab import LabDevice
-from toolbox.checkbox.helpers.connector import Blacklist
 from toolbox.entities.snaps import SnapSpecifier
 from toolbox.interfaces.reboot import RebootInterface
-from toolbox.interfaces.snaps import SnapInterface
 from toolbox.interfaces.snapd import SnapdAPIClient
+from toolbox.interfaces.snaps import SnapInterface
 from toolbox.interfaces.status import SystemStatusInterface
 
 

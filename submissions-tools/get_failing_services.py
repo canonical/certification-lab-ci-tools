@@ -11,7 +11,7 @@ import csv
 import os
 import pathlib
 
-from download_submissions import get_submissions_list, download_submissions
+from download_submissions import download_submissions, get_submissions_list
 
 
 def get_failing_services_post_reboot(submissions, test="post-warm-reboot"):

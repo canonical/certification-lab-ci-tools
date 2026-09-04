@@ -2,28 +2,21 @@
 
 import pytest
 
-from toolbox.interfaces import DeviceInterface, DeviceInterfaceError
-
 from tests.devices.trivial import TrivialDevice
+from toolbox.interfaces import DeviceInterface, DeviceInterfaceError
 
 
 # Test interfaces
 class InterfaceA(DeviceInterface):
     """Simple test interface."""
 
-    pass
-
 
 class InterfaceB(DeviceInterface):
     """Another simple test interface."""
 
-    pass
-
 
 class InterfaceC(DeviceInterface, requires=(InterfaceA,)):
     """Test interface that requires InterfaceA."""
-
-    pass
 
 
 class TestDeviceInitialization:
@@ -80,4 +73,4 @@ class TestDeviceInitialization:
         with pytest.raises(
             DeviceInterfaceError, match="'InterfaceA' is not attached to a device"
         ):
-            interface.device
+            _ = interface.device

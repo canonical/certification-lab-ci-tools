@@ -17,46 +17,37 @@
 # Written by:
 #        Chris Wayne <cwayne@ubuntu.com>
 
-import json
 import os
+
 import requests
-import sys
-
-from influxdb import InfluxDBClient
 from dateutil import parser
-
+from influxdb import InfluxDBClient
 
 INFLUX_HOST = "10.50.124.12"
 
 
 def init_influx():
-    '''Init influxdb with policy'''
+    """Init influxdb with policy"""
     dbname = "pre-certs-report"
-    client = InfluxDBClient(INFLUX_HOST, 8086,
-                            "ce", os.environ.get("INFLUX_PASS"), dbname)
+    client = InfluxDBClient(
+        INFLUX_HOST, 8086, "ce", os.environ.get("INFLUX_PASS"), dbname
+    )
     dbs = client.get_list_database()
-    if {u"name": dbname} not in dbs:
+    if {"name": dbname} not in dbs:
         client.create_database(dbname)
-        client.create_retention_policy("default_policy",
-                                       "350w", 1, default=True)
+        client.create_retention_policy("default_policy", "350w", 1, default=True)
 
 
 def push_influx_generic(measurement, tags, time, fields):
-    '''Generic influx measurement pusher'''
+    """Generic influx measurement pusher"""
     dbname = "pre-certs-report"
-    client = InfluxDBClient(INFLUX_HOST, 8086,
-                            "ce", os.environ.get("INFLUX_PASS"), dbname)
+    client = InfluxDBClient(
+        INFLUX_HOST, 8086, "ce", os.environ.get("INFLUX_PASS"), dbname
+    )
 
-    body = [
-        {
-            "measurement": measurement,
-            "tags": tags,
-            "time": time,
-            "fields": fields
-        }
-    ]
+    body = [{"measurement": measurement, "tags": tags, "time": time, "fields": fields}]
     client.write_points(body)
-    print("Measurement pushed to influx at {}".format(time))
+    print(f"Measurement pushed to influx at {time}")
 
 
 def main():
@@ -67,34 +58,34 @@ def main():
     url = "https://certification.canonical.com/api/v1/certifiedmodeldetails/report/?format=json"
     r = requests.get(url)
     if not r.ok:
-        raise SystemExit("Unable to access report. HTTP {}".format(r.status_code))
+        raise SystemExit(f"Unable to access report. HTTP {r.status_code}")
     report = r.json()
-    measure = 'pre-certs-report'
+    measure = "pre-certs-report"
 
     for cert in report["certificates"]:
         tags = dict()
         fields = dict()
-        tags['model'] = cert['model']
-        tags['network'] = cert['network']
-        tags['wireless'] = cert['wireless']
-        tags['kernel_version'] = cert["kernel_version"]
-        tags['processor'] = cert['processor']
-        tags['release'] = cert['certified_release']
-        tags['video'] = cert['video']
-        tags['make'] = cert['make']
-        tags['level'] = cert['level']
-        fields['wireless'] = cert['wireless']
-        fields['level'] = cert["level"]
-        fields['model'] = cert['model']
-        fields['video'] = cert['video']
-        fields['network'] = cert['network']
-        fields['processor'] = cert['processor']
-        fields['kernel_version'] = cert['kernel_version']
-        fields['make'] = cert['make']
-        fields['certified_release'] = cert['certified_release']
-        fields['certified'] = 1
+        tags["model"] = cert["model"]
+        tags["network"] = cert["network"]
+        tags["wireless"] = cert["wireless"]
+        tags["kernel_version"] = cert["kernel_version"]
+        tags["processor"] = cert["processor"]
+        tags["release"] = cert["certified_release"]
+        tags["video"] = cert["video"]
+        tags["make"] = cert["make"]
+        tags["level"] = cert["level"]
+        fields["wireless"] = cert["wireless"]
+        fields["level"] = cert["level"]
+        fields["model"] = cert["model"]
+        fields["video"] = cert["video"]
+        fields["network"] = cert["network"]
+        fields["processor"] = cert["processor"]
+        fields["kernel_version"] = cert["kernel_version"]
+        fields["make"] = cert["make"]
+        fields["certified_release"] = cert["certified_release"]
+        fields["certified"] = 1
         completed_date = parser.parse(cert["completed"]).replace(tzinfo=None)
-        ts = completed_date.timestamp() * 10 ** 9
+        ts = completed_date.timestamp() * 10**9
         push_influx_generic(measure, tags, int(ts), fields)
 
 

@@ -7,8 +7,8 @@ Example invocation:
     $ python3 get_latest_snap_published.py checkbox beta
     v3.1.2-dev20
 """
-import sys
 
+import sys
 from argparse import ArgumentParser
 
 from snap_info_utility import get_snap_info_from_store

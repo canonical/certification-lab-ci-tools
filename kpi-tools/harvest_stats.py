@@ -18,18 +18,28 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import argparse
-from launchpadlib.launchpad import Launchpad
+import json
+import os
+import time
 from collections import defaultdict
 from datetime import date, datetime, timedelta
-import json
+
 import pytz
 import requests
-import time
-import os
+from launchpadlib.launchpad import Launchpad
 
 ALL_STATUSES = [
-    "Fix Committed", "Invalid", "Won't Fix", "Confirmed", "Triaged", "Expired",
-    "In Progress", "Incomplete", "Fix Released", "New", "Opinion",
+    "Fix Committed",
+    "Invalid",
+    "Won't Fix",
+    "Confirmed",
+    "Triaged",
+    "Expired",
+    "In Progress",
+    "Incomplete",
+    "Fix Released",
+    "New",
+    "Opinion",
 ]
 
 
@@ -40,18 +50,15 @@ class StatHarvester:
         self.till_fixed = []
         self.till_released = []
         last_stats = self.load_last_stats()
-        self.since = last_stats['date'] + timedelta(seconds=1)
-        self.bugs_timeline = {
-            last_stats['date'].date(): last_stats['stats']
-        }
+        self.since = last_stats["date"] + timedelta(seconds=1)
+        self.bugs_timeline = {last_stats["date"].date(): last_stats["stats"]}
         # we want to compute the stats for up to the previous day
         # to do that we need a datetime for the last second of the day
         # this is the most right way to do it, as there are leap seconds
         # and other insanities
         t = datetime.today()
-        self.until = (
-            datetime(t.year, t.month, t.day, tzinfo=pytz.utc) -
-            timedelta(seconds=1)
+        self.until = datetime(t.year, t.month, t.day, tzinfo=pytz.utc) - timedelta(
+            seconds=1
         )
 
     def harvest(self):
@@ -60,170 +67,172 @@ class StatHarvester:
             raise SystemExit()
 
         launchpad = Launchpad.login_with(
-            'stats-harvester', 'production', credentials_file='./lp_credentials')
-        print("Searching for '{}' bugs modified since {}".format(
-            self.proj, self.since))
+            "stats-harvester", "production", credentials_file="./lp_credentials"
+        )
+        print(f"Searching for '{self.proj}' bugs modified since {self.since}")
         modified_bugs = launchpad.projects[self.proj].searchTasks(
-            status=ALL_STATUSES, modified_since=self.since)
-        time_left_str = 'unknown'
+            status=ALL_STATUSES, modified_since=self.since
+        )
+        time_left_str = "unknown"
         start_time = time.time()
         for i, bug in enumerate(modified_bugs, 1):
-            print('Processing bug {}/{}. Estimated time to complete {}'.format(
-                i, len(modified_bugs), time_left_str))
+            print(
+                f"Processing bug {i}/{len(modified_bugs)}. Estimated time to complete {time_left_str}"
+            )
             self._process_bug(bug)
             cur_time = time.time()
             estimated_total = (cur_time - start_time) * len(modified_bugs) / i
-            estimated_time_left = max(
-                0, start_time + estimated_total - cur_time)
-            time_left_str = '{:.2f}s'.format(estimated_time_left)
+            estimated_time_left = max(0, start_time + estimated_total - cur_time)
+            time_left_str = f"{estimated_time_left:.2f}s"
         self.generate_timeline()
 
     def generate_timeline(self):
         date_cursor = self.since.date()
         previous_stats = self.bugs_timeline.get(
-            date_cursor - timedelta(days=1),
-            {key: 0 for key in ALL_STATUSES}
+            date_cursor - timedelta(days=1), {key: 0 for key in ALL_STATUSES}
         )
         while date_cursor < date.today():
             self.bugs_timeline[date_cursor] = previous_stats.copy()
             for key in ALL_STATUSES:
-                self.bugs_timeline[date_cursor][key] += (
-                    self.changes[date_cursor][key])
+                self.bugs_timeline[date_cursor][key] += self.changes[date_cursor][key]
             previous_stats = self.bugs_timeline[date_cursor]
             date_cursor += timedelta(1)
 
     def generate_records(self):
         results = []
         influx_friendly_statuses = {
-            "Confirmed": 'confirmed',
-            "Fix Committed": 'fixcommitted',
-            "Fix Released": 'fixreleased',
-            "In Progress": 'inprogress',
-            "Incomplete": 'incomplete',
-            "Invalid": 'invalid',
-            "New": 'new',
-            "Opinion": 'opinion',
-            "Triaged": 'triaged',
-            "Won't Fix": 'wontfix',
-            "Expired": 'expired',
+            "Confirmed": "confirmed",
+            "Fix Committed": "fixcommitted",
+            "Fix Released": "fixreleased",
+            "In Progress": "inprogress",
+            "Incomplete": "incomplete",
+            "Invalid": "invalid",
+            "New": "new",
+            "Opinion": "opinion",
+            "Triaged": "triaged",
+            "Won't Fix": "wontfix",
+            "Expired": "expired",
         }
         for date_ in sorted(self.bugs_timeline):
             for status in sorted(self.bugs_timeline[date_]):
                 result = {
-                    'time': int(date_.strftime('%s')) * 10 ** 9,
-                    'status': influx_friendly_statuses[status],
-                    'count': self.bugs_timeline[date_][status],
+                    "time": int(date_.strftime("%s")) * 10**9,
+                    "status": influx_friendly_statuses[status],
+                    "count": self.bugs_timeline[date_][status],
                 }
                 results.append(result)
         return results
 
     def dump_json(self):
-        with open(self._generate_filename('time_till_fixed'), 'wt') as f:
+        with open(self._generate_filename("time_till_fixed"), "wt") as f:
             json.dump(self.till_fixed, f, indent=2)
-        with open(self._generate_filename('time_till_released'), 'wt') as f:
+        with open(self._generate_filename("time_till_released"), "wt") as f:
             json.dump(self.till_released, f, indent=2)
-        with open(self._generate_filename('bugs_statistics'), 'wt') as f:
+        with open(self._generate_filename("bugs_statistics"), "wt") as f:
             json.dump(self.generate_records(), f, indent=2)
 
     def dump_sql(self):
         for res in self.generate_records():
-            print('insert {},project={},tags=all value={}i {}'.format(
-                "launchpad_bugs_{}".format(res['status']),
-                self.proj,
-                res["count"],
-                res["time"])
+            print(
+                "insert {},project={},tags=all value={}i {}".format(
+                    "launchpad_bugs_{}".format(res["status"]),
+                    self.proj,
+                    res["count"],
+                    res["time"],
+                )
             )
 
     def push_to_bork(self, bork_addr, db_name):
         measurements = []
         for res in self.generate_records():
             point = {
-                'measurement': 'launchpad_bugs_{}'.format(res['status']),
-                'tags': {
-                    'tags': 'all',
-                    'project': self.proj,
+                "measurement": "launchpad_bugs_{}".format(res["status"]),
+                "tags": {
+                    "tags": "all",
+                    "project": self.proj,
                 },
-                'fields': {
-                    'value': res['count'],
+                "fields": {
+                    "value": res["count"],
                 },
-                'time': res['time'],
+                "time": res["time"],
             }
             measurements.append(point)
         for res in self.till_fixed:
             point = {
-                'measurement': 'time_to_fix_committed',
-                'tags': {
-                    'tags': res['tags'],
-                    'project': self.proj,
-                    'id': res['id'],
+                "measurement": "time_to_fix_committed",
+                "tags": {
+                    "tags": res["tags"],
+                    "project": self.proj,
+                    "id": res["id"],
                 },
-                'fields': {
-                    'hours': res['hours'],
+                "fields": {
+                    "hours": res["hours"],
                 },
-                'time': res['time'],
+                "time": res["time"],
             }
             measurements.append(point)
         for res in self.till_released:
             point = {
-                'measurement': 'time_to_fix_released',
-                'tags': {
-                    'tags': res['tags'],
-                    'project': self.proj,
-                    'id': res['id'],
+                "measurement": "time_to_fix_released",
+                "tags": {
+                    "tags": res["tags"],
+                    "project": self.proj,
+                    "id": res["id"],
                 },
-                'fields': {
-                    'hours': res['hours'],
+                "fields": {
+                    "hours": res["hours"],
                 },
-                'time': res['time'],
+                "time": res["time"],
             }
             measurements.append(point)
 
-        bork_url = 'http://{}/influx'.format(bork_addr)
+        bork_url = f"http://{bork_addr}/influx"
         # infrastructure can choke on too big bundle of records,
         # so let's chop it into 1000-record-long chunks
         while measurements:
             chunk = measurements[:1000]
             measurements = measurements[100:]
             request = {
-                'database': db_name,
-                'measurements': chunk,
+                "database": db_name,
+                "measurements": chunk,
             }
             response = requests.post(bork_url, json=request)
             if not response:
-                print("Couldn't push measurements:\n{}: {}".format(
-                    response, response.text))
+                print(f"Couldn't push measurements:\n{response}: {response.text}")
 
     def dump_last_stats(self):
         last_state = {
-            'date': self.until.strftime('%Y-%m-%dT%H:%M:%S%z'),
-            'stats': self.bugs_timeline[self.until.date()],
+            "date": self.until.strftime("%Y-%m-%dT%H:%M:%S%z"),
+            "stats": self.bugs_timeline[self.until.date()],
         }
-        with open('{}-last-stats.json'.format(self.proj), 'wt') as f:
+        with open(f"{self.proj}-last-stats.json", "wt") as f:
             json.dump(last_state, f, indent=2)
 
     def load_last_stats(self):
         try:
-            with open('{}-last-stats.json'.format(self.proj), 'rt') as f:
+            with open(f"{self.proj}-last-stats.json", "rt") as f:
                 stats = json.load(f)
-            stats['date'] = datetime.strptime(
-                stats['date'], '%Y-%m-%dT%H:%M:%S%z')
+            stats["date"] = datetime.strptime(stats["date"], "%Y-%m-%dT%H:%M:%S%z")
             return stats
         except Exception as exc:
             print("Problem with parsing the date from last-stats")
             print(exc)
             return {
-                'date': datetime(2012, 8, 1, tzinfo=pytz.utc),
-                'stats': {key: 0 for key in ALL_STATUSES},
+                "date": datetime(2012, 8, 1, tzinfo=pytz.utc),
+                "stats": {key: 0 for key in ALL_STATUSES},
             }
 
     def _generate_filename(self, name):
-        basename = '{}-{}-{}'.format(
-            self.proj, name, datetime.today().strftime("%Y-%m-%d"),
-            self.until.strftime("%Y-%m-%d"))
-        possible_name = basename + '.json'
+        basename = "{}-{}-{}".format(
+            self.proj,
+            name,
+            datetime.today().strftime("%Y-%m-%d"),
+            self.until.strftime("%Y-%m-%d"),
+        )
+        possible_name = basename + ".json"
         if os.path.exists(possible_name):
             for i in range(1, 1000):
-                possible_name = '{}({}).json'.format(basename, i)
+                possible_name = f"{basename}({i}).json"
                 if not os.path.exists(possible_name):
                     return possible_name
         else:
@@ -239,43 +248,40 @@ class StatHarvester:
         # the first status change encounter
         seen_first_change = False
         for act in bug.bug.activity:
-            if act.whatchanged == '{}: status'.format(self.proj):
+            if act.whatchanged == f"{self.proj}: status":
                 if not seen_first_change:
                     born_status = act.oldvalue
                     seen_first_change = True
-                if (
-                    act.datechanged < self.since or
-                    act.datechanged > self.until
-                ):
+                if act.datechanged < self.since or act.datechanged > self.until:
                     continue
                 date = act.datechanged.date()
                 self.changes[date][act.oldvalue] -= 1
                 self.changes[date][act.newvalue] += 1
         # find time to it took from confirmed to fixed
         if bug.date_fix_committed:
-            date_confirmed = (
-                bug.date_confirmed or bug.date_triaged or bug.date_created)
+            date_confirmed = bug.date_confirmed or bug.date_triaged or bug.date_created
             ttfc = bug.date_fix_committed - date_confirmed
-            self.till_fixed.append({
-                'hours': ttfc.total_seconds() // 3600,
-                'time': int(
-                    bug.date_fix_committed.date().strftime('%s')) * 10 ** 9,
-                'project': self.proj,
-                'id': bug.bug.id,
-                'tags': ' '.join(bug.bug.tags),
-            })
+            self.till_fixed.append(
+                {
+                    "hours": ttfc.total_seconds() // 3600,
+                    "time": int(bug.date_fix_committed.date().strftime("%s")) * 10**9,
+                    "project": self.proj,
+                    "id": bug.bug.id,
+                    "tags": " ".join(bug.bug.tags),
+                }
+            )
         if bug.date_fix_released:
-            date_confirmed = (
-                bug.date_confirmed or bug.date_triaged or bug.date_created)
+            date_confirmed = bug.date_confirmed or bug.date_triaged or bug.date_created
             ttfr = bug.date_fix_released - date_confirmed
-            self.till_released.append({
-                'hours': ttfr.total_seconds() // 3600,
-                'time': int(
-                    bug.date_fix_released.date().strftime('%s')) * 10 ** 9,
-                'project': self.proj,
-                'id': bug.bug.id,
-                'tags': ' '.join(bug.bug.tags),
-            })
+            self.till_released.append(
+                {
+                    "hours": ttfr.total_seconds() // 3600,
+                    "time": int(bug.date_fix_released.date().strftime("%s")) * 10**9,
+                    "project": self.proj,
+                    "id": bug.bug.id,
+                    "tags": " ".join(bug.bug.tags),
+                }
+            )
         # if we still haven't seen a status changes it means that the bug has
         # the same status it was filed with
         if not seen_first_change:
@@ -288,13 +294,11 @@ class StatHarvester:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("project")
+    parser.add_argument("--db-bridge", help="IP address of the db-bridge to use")
     parser.add_argument(
-        "--db-bridge", help="IP address of the db-bridge to use")
-    parser.add_argument(
-        "--dump-json", help="Dump statistics to JSON files",
-        action="store_true")
-    parser.add_argument(
-        "--db-name", help="Database name to push results to")
+        "--dump-json", help="Dump statistics to JSON files", action="store_true"
+    )
+    parser.add_argument("--db-name", help="Database name to push results to")
 
     args = parser.parse_args()
     harvester = StatHarvester(args.project)
@@ -307,5 +311,6 @@ def main():
             raise SystemExit("You need to provide --db-name when using bork!")
         harvester.push_to_bork(args.db_bridge, args.db_name)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

@@ -1,20 +1,19 @@
 """Tests for the toolbox.interfaces.snaps module."""
 
 import pytest
-
 from invoke import Result
+
+from tests.devices.trivial import TrivialDevice
 from toolbox.interfaces.reboot import RebootInterface
+from toolbox.interfaces.snapd import SnapdAPIClient, SnapdAPIError
 from toolbox.interfaces.snaps import (
     SnapInstallError,
     SnapInterface,
     SnapNotFoundError,
 )
-from toolbox.interfaces.snapd import SnapdAPIClient, SnapdAPIError
 from toolbox.interfaces.status import SystemStatusInterface
 from toolbox.results import BooleanResult
 from toolbox.retries import Linear
-
-from tests.devices.trivial import TrivialDevice
 
 
 class TestSnapGets:

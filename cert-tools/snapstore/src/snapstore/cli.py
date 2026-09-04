@@ -1,14 +1,13 @@
-from argparse import ArgumentParser, Namespace
 import json
-from typing import List
+from argparse import ArgumentParser, Namespace
 
-from snapstore.craft import create_base_client
 from snapstore.client import SnapstoreClient
+from snapstore.craft import create_base_client
 from snapstore.info import SnapstoreInfo
-from snapstore.snaps import SnapSpecifier, SnapChannel
+from snapstore.snaps import SnapChannel, SnapSpecifier
 
 
-def get_info_arguments(args: List[str] | None = None) -> Namespace:
+def get_info_arguments(args: list[str] | None = None) -> Namespace:
     parser = ArgumentParser(description="Retrieve snap info from the Store")
     parser.add_argument("snap", type=str)
     parser.add_argument("channel", type=str)
@@ -99,7 +98,7 @@ def _get_refresh_info(info: SnapstoreInfo, args: Namespace) -> dict:
         raise ValueError(f"{snap}@{architecture}: {result['error']['message']}")
 
     # process and return the result
-    return {**result["snap"], **{"effective-channel": result["effective-channel"]}}
+    return {**result["snap"], "effective-channel": result["effective-channel"]}
 
 
 def info_cli():

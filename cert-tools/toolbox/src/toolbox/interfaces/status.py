@@ -1,12 +1,12 @@
 """Interface for checking systemd system status."""
 
-from functools import partial
 import logging
-from typing import Iterable
+from collections.abc import Iterable
+from functools import partial
 
 from toolbox.interfaces import DeviceInterface
 from toolbox.results import BooleanResult
-from toolbox.retries import retry, RetryPolicy
+from toolbox.retries import RetryPolicy, retry
 
 logger = logging.getLogger(__name__)
 

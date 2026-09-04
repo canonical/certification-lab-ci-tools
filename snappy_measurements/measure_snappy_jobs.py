@@ -36,69 +36,71 @@ in the influx_credentials.py.
 """
 
 MEASURED_JOBS = [
-    'snap-install',
-    'snap-remove',
-    'connect-tillamook-plugs',
-    'connect-caracalla-plugs',
+    "snap-install",
+    "snap-remove",
+    "connect-tillamook-plugs",
+    "connect-caracalla-plugs",
 ]
 
-BOOTUP_JOB_ID = 'info/systemd-analyze'
+BOOTUP_JOB_ID = "info/systemd-analyze"
 
 
 def dquote(s):
     # surround s with double quotes
-    return '"{}"'.format(s)
+    return f'"{s}"'
 
 
 def to_human_name(hw_id):
     better_names = {
-        'cert-caracalla-transport-checkbox-plano-edge': 'Caracalla plano-edge',
-        'cert-tillamook-core-beta': 'Tillamook core beta',
-        'cert-cm3-core-beta': 'CM3 core-beta',
+        "cert-caracalla-transport-checkbox-plano-edge": "Caracalla plano-edge",
+        "cert-tillamook-core-beta": "Tillamook core beta",
+        "cert-cm3-core-beta": "CM3 core-beta",
     }
     return better_names.get(hw_id, hw_id)
 
 
-class InfluxQueryWriter():
-
+class InfluxQueryWriter:
     def __init__(self, hw_id, submission, tstamp=None):
-        self._proj = dquote(submission.get('title', 'unknown'))
-        self._time = int(tstamp * 10 ** 9)
+        self._proj = dquote(submission.get("title", "unknown"))
+        self._time = int(tstamp * 10**9)
         self._hw_id = dquote(to_human_name(hw_id))
-        self._os_kind = dquote(submission.get('distribution', dict()).get(
-            'description', 'unknown'))
-        snap_packages = submission.get('snap-packages', dict())
+        self._os_kind = dquote(
+            submission.get("distribution", dict()).get("description", "unknown")
+        )
+        snap_packages = submission.get("snap-packages", dict())
         for snap in snap_packages:
-            if snap.get('name', '') == 'core':
-                self._core_rev = snap.get('revision', '0')
+            if snap.get("name", "") == "core":
+                self._core_rev = snap.get("revision", "0")
                 break
         else:
-            self._core_rev = '0'
-        self._results = (
-            submission.get('results', []) +
-            submission.get('resource-results', [])
+            self._core_rev = "0"
+        self._results = submission.get("results", []) + submission.get(
+            "resource-results", []
         )
 
     def generate_sql_inserts(self):
-        TMPL = ("INSERT snap_timing,project_name={proj},job_name={job},"
-                "hw_id={hw},os_kind={os},core_revision={core_rev} "
-                "elapsed={elapsed} {tstamp}")
+        TMPL = (
+            "INSERT snap_timing,project_name={proj},job_name={job},"
+            "hw_id={hw},os_kind={os},core_revision={core_rev} "
+            "elapsed={elapsed} {tstamp}"
+        )
         for m in self.extract_measurements():
             yield TMPL.format(
-                proj=m['tags']['project_name'],
-                job=m['tags']['job_name'],
-                hw=m['tags']['hw_id'],
-                os=m['tags']['os_kind'],
-                core_rev=m['tags']['core_revision'],
-                elapsed=m['fields']['elapsed'],
-                tstamp=m['time'])
+                proj=m["tags"]["project_name"],
+                job=m["tags"]["job_name"],
+                hw=m["tags"]["hw_id"],
+                os=m["tags"]["os_kind"],
+                core_rev=m["tags"]["core_revision"],
+                elapsed=m["fields"]["elapsed"],
+                tstamp=m["time"],
+            )
 
     def extract_measurements(self):
         for result in self._results:
             # for some jobs extract elapsed time as measured by checkbox
             for job in MEASURED_JOBS:
-                if result['id'].endswith(job):
-                    if not result.get('duration'):
+                if result["id"].endswith(job):
+                    if not result.get("duration"):
                         continue
                     measurement = {
                         "measurement": "snap_timing",
@@ -112,16 +114,18 @@ class InfluxQueryWriter():
                         "time": self._time,
                         "fields": {
                             "elapsed": result["duration"],
-                        }
+                        },
                     }
                     yield measurement
             # for boot-up job extract time from the job's output
-            if result['id'].endswith(BOOTUP_JOB_ID):
-                timings = parse_sysd_analyze(result['io_log'])
-                if 'total' not in timings.keys():
-                    print("{} job didn't have proper output."
-                          " It returned:\n{}".format(
-                              result['id'], result['io_log']))
+            if result["id"].endswith(BOOTUP_JOB_ID):
+                timings = parse_sysd_analyze(result["io_log"])
+                if "total" not in timings.keys():
+                    print(
+                        "{} job didn't have proper output. It returned:\n{}".format(
+                            result["id"], result["io_log"]
+                        )
+                    )
                 else:
                     measurement = {
                         "measurement": "snap_timing",
@@ -134,8 +138,8 @@ class InfluxQueryWriter():
                         },
                         "time": self._time,
                         "fields": {
-                            "elapsed": timings['total'],
-                        }
+                            "elapsed": timings["total"],
+                        },
                     }
                     yield measurement
 
@@ -177,74 +181,83 @@ def parse_sysd_analyze(text):
     ... 'userspace': 74.137, 'total': 120.752}
     True
     """
-    if '+' not in text or '=' not in text:
+    if "+" not in text or "=" not in text:
         return
 
     def extract(tx):
         # XXX: fractions of a seconds can be printed in two ways depending if
         # there are whole seconds to report
-        RE = (r'[^\d]*(?P<hours>\s?\d+h)?(?P<minutes>\s?\d+min)?'
-              '(?P<seconds>\s?\d+(\.\d*)?s)?(?P<millis>\s?\d+ms)?')
+        RE = (
+            r"[^\d]*(?P<hours>\s?\d+h)?(?P<minutes>\s?\d+min)?"
+            r"(?P<seconds>\s?\d+(\.\d*)?s)?(?P<millis>\s?\d+ms)?"
+        )
         groups = re.match(RE, tx).groupdict()
-        hours = (groups['hours'] or '0h')[:-1]
-        minutes = (groups['minutes'] or '0min')[:-3]
-        seconds = (groups['seconds'] or '0s')[:-1]
-        milliseconds = (groups['millis'] or '0ms')[:-2]
-        res = (float(hours) * 3600 + float(minutes) * 60 + float(seconds) +
-               float(milliseconds) / 1000)
+        hours = (groups["hours"] or "0h")[:-1]
+        minutes = (groups["minutes"] or "0min")[:-3]
+        seconds = (groups["seconds"] or "0s")[:-1]
+        milliseconds = (groups["millis"] or "0ms")[:-2]
+        res = (
+            float(hours) * 3600
+            + float(minutes) * 60
+            + float(seconds)
+            + float(milliseconds) / 1000
+        )
         return res
-    head, tail = text.split('=')
-    res = {'total': extract(tail)}
-    segments = head.split('+')
+
+    head, tail = text.split("=")
+    res = {"total": extract(tail)}
+    segments = head.split("+")
     for seg in segments:
-        label = re.search(r'\((.+)\)', seg).groups()[0]
+        label = re.search(r"\((.+)\)", seg).groups()[0]
         res[label] = extract(seg)
     return res
 
 
 def push_to_influx(measurements):
     from influxdb import InfluxDBClient
+
     client = InfluxDBClient(
-        credentials['host'],
+        credentials["host"],
         8086,
-        credentials['user'],
-        os.environ.get("INFLUX_PASS") or credentials['pass'],
-        credentials['dbname']
+        credentials["user"],
+        os.environ.get("INFLUX_PASS") or credentials["pass"],
+        credentials["dbname"],
     )
     client.write_points(measurements)
 
 
 def push_using_bridge(measurements):
     import requests
-    reqobj = {
-        'database': 'snappy_performance',
-        'measurements': list(measurements)
-    }
-    res = requests.post('http://10.101.51.246:8000/influx', json=reqobj)
+
+    reqobj = {"database": "snappy_performance", "measurements": list(measurements)}
+    res = requests.post("http://10.101.51.246:8000/influx", json=reqobj)
     return res
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('SUBMISSION_FILE')
-    parser.add_argument('--hw_id', default='unknown')
-    parser.add_argument('--timestamp', default=time.time(), type=float)
-    parser.add_argument('--sql', action='store_true', help=(
-        "Print out insert queries instead of pushing object to influx"))
-    parser.add_argument('--bridge', action='store_true', help=(
-        "Use bridge to push measurements"))
+    parser.add_argument("SUBMISSION_FILE")
+    parser.add_argument("--hw_id", default="unknown")
+    parser.add_argument("--timestamp", default=time.time(), type=float)
+    parser.add_argument(
+        "--sql",
+        action="store_true",
+        help=("Print out insert queries instead of pushing object to influx"),
+    )
+    parser.add_argument(
+        "--bridge", action="store_true", help=("Use bridge to push measurements")
+    )
     args = parser.parse_args()
 
     try:
-        with open(args.SUBMISSION_FILE, 'rt') as f:
+        with open(args.SUBMISSION_FILE, "rt") as f:
             try:
                 content = json.load(f)
             except json.JSONDecodeError:
-                raise SystemExit("Failed to parse {}".format(
-                    args.SUBMISSION_FILE))
+                raise SystemExit(f"Failed to parse {args.SUBMISSION_FILE}")
             iqw = InfluxQueryWriter(args.hw_id, content, args.timestamp)
             if args.sql:
-                print('\n'.join(iqw.generate_sql_inserts()))
+                print("\n".join(iqw.generate_sql_inserts()))
             elif args.bridge:
                 return push_using_bridge(iqw.extract_measurements())
             else:
@@ -253,5 +266,5 @@ def main():
         raise exc
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

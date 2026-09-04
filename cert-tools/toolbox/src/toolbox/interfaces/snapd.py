@@ -3,11 +3,12 @@
 Reference: https://snapcraft.io/docs/snapd-api
 """
 
-from contextlib import suppress
-from io import StringIO
 import json
 import re
+from contextlib import suppress
+from io import StringIO
 from urllib.parse import urlencode
+
 import yaml
 
 from toolbox.interfaces import DeviceInterface
@@ -35,7 +36,7 @@ class SnapdAPIClient(DeviceInterface):
     """
 
     @staticmethod
-    def create_get_request_url(endpoint: str, params: dict = None) -> str:
+    def create_get_request_url(endpoint: str, params: dict | None = None) -> str:
         """Build the GET request URL for a snapd API endpoint."""
         query = "?" + urlencode(params, doseq=True) if params else ""
         return f"GET /v2/{endpoint}{query}"

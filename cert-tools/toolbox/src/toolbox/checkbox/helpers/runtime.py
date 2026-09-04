@@ -1,10 +1,11 @@
 """Helper for determining the appropriate Checkbox runtime snap."""
 
-from dataclasses import replace
 import re
+from dataclasses import replace
 
 from snapstore.client import SnapstoreClient
 from snapstore.info import SnapstoreInfo
+
 from toolbox.devices import Device
 from toolbox.entities.snaps import SnapSpecifier
 

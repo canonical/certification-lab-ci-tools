@@ -1,7 +1,8 @@
-from pytest import raises, fixture
+from pytest import fixture, raises
+from requests import HTTPError
+
 from snapstore.client import SnapstoreClient
 from snapstore.craft import HTTPClient, UbuntuOneStoreClient
-from requests import HTTPError
 
 
 class TestSnapstoreClient:
