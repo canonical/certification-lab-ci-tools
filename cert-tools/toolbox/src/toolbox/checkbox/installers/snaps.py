@@ -6,7 +6,11 @@ import os
 
 from snapstore.client import SnapstoreClient
 
-from toolbox.checkbox.helpers.connector import Predicate, SelectSnaps, SnapConnector
+from toolbox.checkbox.helpers.connector import (
+    Predicate,
+    SelectSnaps,
+    SnapConnector,
+)
 from toolbox.checkbox.helpers.runtime import CheckboxRuntimeHelper
 from toolbox.checkbox.installers import CheckboxInstaller
 from toolbox.devices import Device
@@ -55,6 +59,9 @@ class CheckboxSnapsInstaller(CheckboxInstaller):
     def checkbox_cli(self):
         """Return the command to invoke the Checkbox CLI from the primary frontend snap."""
         return f"{self.frontends[0].name}.checkbox-cli"
+
+    def get_checkbox_major(self):
+        return self.runtime.name[-2:]
 
     def install_frontend_snap(self, snap: SnapSpecifier):
         """Download and install a Checkbox frontend snap, trying devmode first then classic."""
