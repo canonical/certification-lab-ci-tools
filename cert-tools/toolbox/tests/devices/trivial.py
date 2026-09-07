@@ -15,4 +15,3 @@ class TrivialDevice(Device):
 
     def run(self, command, **kwargs):
         """Minimal run implementation that will be mocked in tests."""
-        pass

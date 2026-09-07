@@ -124,9 +124,7 @@ def parse_args(argv):
     :return: a pair with the important arguments
     """
 
-    parser = argparse.ArgumentParser(
-        description="Select the kernel to boot into."
-    )
+    parser = argparse.ArgumentParser(description="Select the kernel to boot into.")
     parser.add_argument(
         "kernel",
         metavar="KERNEL",
@@ -162,6 +160,7 @@ def add_efi_opt(cmdline):
 
     return cmdline + " efi=runtime"
 
+
 def update_cmd_linux(grub_cfg_contents):
     """
     Goes through the context of the grub config file,
@@ -182,13 +181,11 @@ def update_cmd_linux(grub_cfg_contents):
     return "\n".join(output)
 
 
-
 def main(argv):
     args = parse_args(argv)
     kernel = args.kernel[0]
     dry_run = args.dry_run
     enable_efi_vars = args.enable_efi_vars
-
 
     print("Reading existing kernel from /boot/grub/grub.cfg...")
     grub_cfg_contents = get_grub_cfg_contents()
@@ -221,7 +218,6 @@ def main(argv):
     )
     if enable_efi_vars or kernel.lower() == "realtime":
         new_grub_default_contents = update_cmd_linux(new_grub_default_contents)
-
 
     if dry_run:
         print("Dry run, not writing to grub config.")

@@ -1,8 +1,9 @@
-import unittest
 import subprocess
+import unittest
 from unittest.mock import patch
 
 import checkout_to_version
+
 
 class TestCheckoutToVersion(unittest.TestCase):
     @patch("checkout_to_version.check_call")

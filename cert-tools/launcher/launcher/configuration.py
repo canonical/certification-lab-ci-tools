@@ -1,10 +1,9 @@
+from collections.abc import Sequence
 from configparser import ConfigParser
 from pathlib import Path
-from typing import Optional, Sequence
 
 
 class CheckBoxConfiguration(ConfigParser):
-
     def __init__(self):
         super().__init__(delimiters=("=",))
 
@@ -12,7 +11,7 @@ class CheckBoxConfiguration(ConfigParser):
         return str(optionstr)
 
     @property
-    def description(self) -> Optional[str]:
+    def description(self) -> str | None:
         return self.get("launcher", "session_desc", fallback=None)
 
     @description.setter
@@ -32,10 +31,7 @@ class CheckBoxConfiguration(ConfigParser):
             self.write(file)
 
     def stack(
-        self,
-        paths: Sequence[Path],
-        output: Path,
-        description: Optional[str] = None
+        self, paths: Sequence[Path], output: Path, description: str | None = None
     ):
         # stack *all* configuration files, in the specified order
         # (read is inconvenient, it doesn't mind non-existent files)

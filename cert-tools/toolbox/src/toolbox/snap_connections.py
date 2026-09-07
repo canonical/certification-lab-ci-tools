@@ -14,16 +14,17 @@ grep -o '{.*}'
 ```
 """
 
+import json
+import logging
+import re
+import sys
+import warnings
 from abc import ABC, abstractmethod
 from argparse import ArgumentParser
 from collections import defaultdict
-import json
-import logging
-import warnings
 from pathlib import Path
-import re
-import sys
-from typing import Dict, List, NamedTuple, Optional, Set
+from typing import NamedTuple
+
 import yaml
 
 logger = logging.getLogger(__name__)
@@ -69,8 +70,8 @@ logger.addHandler(logging.StreamHandler())
 #     ]
 # }
 # ```
-PlugDict = Dict
-SlotDict = Dict
+PlugDict = dict
+SlotDict = dict
 
 
 class Connection(NamedTuple):
@@ -115,7 +116,7 @@ class PredicateCheckResult(NamedTuple):
     """
 
     result: bool
-    message: Optional[str] = None
+    message: str | None = None
 
     def __bool__(self) -> bool:
         return self.result
@@ -180,7 +181,7 @@ class DifferentSnaps(Predicate):
 class SelectSnaps(Predicate):
     """Only select connections plugging specific snaps."""
 
-    def __init__(self, snaps: List[str]):
+    def __init__(self, snaps: list[str]):
         self.snaps = set(snaps)
 
     def check(self, plug: PlugDict, slot: SlotDict) -> PredicateCheckResult:
@@ -190,7 +191,7 @@ class SelectSnaps(Predicate):
 class Blacklist(Predicate):
     """Only select connections that haven't been blacklisted."""
 
-    def __init__(self, blacklist: List[Connection]):
+    def __init__(self, blacklist: list[Connection]):
         self.blacklist = blacklist
 
     @classmethod
@@ -231,7 +232,7 @@ class Blacklist(Predicate):
 
 
 class Connector:
-    def __init__(self, predicates: Optional[List[Predicate]] = None):
+    def __init__(self, predicates: list[Predicate] | None = None):
         # specify the predicate functions that will be used by default
         # to select or filter out possible connections between plus and slots
         self.predicates = [MatchAttributes, DifferentSnaps]
@@ -239,7 +240,7 @@ class Connector:
         if predicates:
             self.predicates.extend(predicates)
 
-    def process(self, snap_connection_data) -> Set[Connection]:
+    def process(self, snap_connection_data) -> set[Connection]:
         """
         Process the output of the `connections` endpoint of the snapd API
         and return a set of possible connections (`Connection` objects).
@@ -272,7 +273,7 @@ class Connector:
         return connections
 
 
-def main(args: Optional[List[str]] = None):
+def main(args: list[str] | None = None):
     warnings.warn(
         """
 DEPRECATED: This module will be removed once bash scriplets are migrated.

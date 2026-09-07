@@ -19,7 +19,6 @@ import json
 import os
 import re
 import subprocess
-
 from collections import defaultdict
 from datetime import datetime, timedelta
 
@@ -34,64 +33,70 @@ At the end it will print bash invocations that need to be run from within the
 """
 
 PROJECTS = [
-    'cert-caracalla-gpa-core-beta',
-    'cert-caracalla-media-core-beta',
-    'cert-caracalla-transport-core-beta',
-    'cert-cm3-core-beta',
-    'cert-dragonboard-core-beta',
-    'cert-havasu-core-beta',
-    'cert-rpi2-core-beta',
-    'cert-rpi3-armhf-core-beta',
-    'cert-stlouis-core-beta',
-    'cert-stlouis-tpm2-core-beta',
-    'cert-tampere-core-beta',
-    'cert-tillamook-core-beta',
-    'cert-vienna-ioter5-core-beta',
-    'cert-caracalla-transport-checkbox-plano-edge',
+    "cert-caracalla-gpa-core-beta",
+    "cert-caracalla-media-core-beta",
+    "cert-caracalla-transport-core-beta",
+    "cert-cm3-core-beta",
+    "cert-dragonboard-core-beta",
+    "cert-havasu-core-beta",
+    "cert-rpi2-core-beta",
+    "cert-rpi3-armhf-core-beta",
+    "cert-stlouis-core-beta",
+    "cert-stlouis-tpm2-core-beta",
+    "cert-tampere-core-beta",
+    "cert-tillamook-core-beta",
+    "cert-vienna-ioter5-core-beta",
+    "cert-caracalla-transport-checkbox-plano-edge",
 ]
 
-JENKINS = 'http://10.101.50.238:8080/'
+JENKINS = "http://10.101.50.238:8080/"
+
 
 class WgetError(Exception):
     pass
 
+
 def wget(url, filename=None):
     # this is needed as no python-wget or requests on yantok
     # if filename is None return the wgotten file as string
-    cmd = ['wget', '-q', '-O', filename or '-', url]
+    cmd = ["wget", "-q", "-O", filename or "-", url]
     try:
         out = subprocess.check_output(cmd)
-        return out.decode('utf-8')
+        return out.decode("utf-8")
     except subprocess.CalledProcessError:
         raise WgetError
 
+
 def get_latest_builds():
-    url = JENKINS + 'job/{job_name}/api/json'
+    url = JENKINS + "job/{job_name}/api/json"
     builds = dict()
     for proj in PROJECTS:
         try:
             res = wget(url.format(job_name=proj))
         except WgetError:
-            print('Unable to fetch "{}" jenkins project information. '
-                  'Is the project still available?'.format(proj))
+            print(
+                f'Unable to fetch "{proj}" jenkins project information. '
+                "Is the project still available?"
+            )
             continue
         job_desc = json.loads(res)
         try:
-            builds[proj] = job_desc['lastBuild']['number']
+            builds[proj] = job_desc["lastBuild"]["number"]
         except KeyError:
-            print('failed to get last build number for {}'.format(proj))
+            print(f"failed to get last build number for {proj}")
     return builds
 
+
 def pull(proj, index):
-    print('pulling artifacts of job #{} for {}'.format(index, proj))
-    base_url = JENKINS + 'view/Core/job/{}/{}/'.format(proj, index)
-    snap_url = base_url + 'artifact/artifacts/snaplist.txt/*view*/'
-    console_url = base_url + 'consoleText'
-    submission_url = base_url + 'artifact/artifacts/submission.json/*view*/'
+    print(f"pulling artifacts of job #{index} for {proj}")
+    base_url = JENKINS + f"view/Core/job/{proj}/{index}/"
+    snap_url = base_url + "artifact/artifacts/snaplist.txt/*view*/"
+    console_url = base_url + "consoleText"
+    submission_url = base_url + "artifact/artifacts/submission.json/*view*/"
     try:
-        wget(console_url, 'meta')
-        wget(submission_url, 'submission.json')
-        wget(snap_url, 'snaplist')
+        wget(console_url, "meta")
+        wget(submission_url, "submission.json")
+        wget(snap_url, "snaplist")
     except WgetError:
         return False
     return True
@@ -107,31 +112,32 @@ def download_artifacts(projects):
         builds = projects[proj][:]
         for index in builds:
             if os.path.exists(str(index)):
-                print("{}/{} already exists. Skipping.".format(proj, index))
+                print(f"{proj}/{index} already exists. Skipping.")
                 continue
             os.mkdir(str(index))
             os.chdir(str(index))
             try:
                 pull(proj, index)
-                os.chdir('..')
+                os.chdir("..")
             except WgetError:
-                os.chdir('..')
+                os.chdir("..")
                 shutil.rmtree(str(index), ignore_errors=True)
                 proj.remove(index)
                 shutil.rmtree(str(index), ignore_errors=True)
-        os.chdir('..')
+        os.chdir("..")
+
 
 def extract_timestamp(path):
     dt = None
-    with open(os.path.join(path, 'meta'), 'rt') as f:
-        for line in f.readlines():
-            regex = re.compile(r'\d{4}-\d{2}-\d{2}\ \d{2}:\d{2}:\d{2}')
+    with open(os.path.join(path, "meta"), "rt") as f:
+        for line in f:
+            regex = re.compile(r"\d{4}-\d{2}-\d{2}\ \d{2}:\d{2}:\d{2}")
             match = regex.match(line)
             if match:
-                dt = datetime.strptime(
-                    match.group(), '%Y-%m-%d %H:%M:%S')
+                dt = datetime.strptime(match.group(), "%Y-%m-%d %H:%M:%S")
                 break
     return dt
+
 
 def measurement_tool_invocation(projects):
     for proj in projects.keys():
@@ -139,29 +145,35 @@ def measurement_tool_invocation(projects):
             val = extract_timestamp(os.path.join(proj, str(index)))
             if val:
                 timestamp = (val - datetime(1970, 1, 1)) / timedelta(seconds=1)
-                cmd = ['../measure_snappy_jobs.py', '--hw_id', proj,
-                    '--timestamp', str(timestamp), os.path.join(
-                        proj, str(index), 'submission.json')]
+                cmd = [
+                    "../measure_snappy_jobs.py",
+                    "--hw_id",
+                    proj,
+                    "--timestamp",
+                    str(timestamp),
+                    os.path.join(proj, str(index), "submission.json"),
+                ]
                 # XXX: This could call the measure_snapp_jobs.py directly
                 #      but the whole script would need an access to both:
                 #      Jenkins and InfluxDB
-                print(' '.join(cmd))
+                print(" ".join(cmd))
+
 
 def push_results(projects):
     from measure_snappy_jobs import InfluxQueryWriter, push_to_influx
+
     problems = []
     for proj in projects.keys():
         for index in projects[proj]:
             val = extract_timestamp(os.path.join(proj, str(index)))
             if val:
                 timestamp = (val - datetime(1970, 1, 1)) / timedelta(seconds=1)
-                submission_file = os.path.join(
-                    proj, str(index), 'submission.json')
-                with open(submission_file, 'rt', encoding='utf-8') as f:
+                submission_file = os.path.join(proj, str(index), "submission.json")
+                with open(submission_file, "rt", encoding="utf-8") as f:
                     try:
                         content = json.load(f)
                     except json.JSONDecodeError:
-                        print("Failed to parse {}".format(submission_file))
+                        print(f"Failed to parse {submission_file}")
                         continue
                     iqw = InfluxQueryWriter(proj, content, timestamp)
                     res = push_to_influx(iqw.extract_measurements())
@@ -170,7 +182,7 @@ def push_results(projects):
 
 def main():
     try:
-        with open('previous_pulls.json', 'rt', encoding='utf-8') as f:
+        with open("previous_pulls.json", "rt", encoding="utf-8") as f:
             prev = json.loads(f.read())
     except:
         print("Unable to read previous_pulls.json. Downloading everything!")
@@ -178,22 +190,23 @@ def main():
     prev = defaultdict(int, prev)
     last_builds = get_latest_builds()
     projects = {
-        n: list(range(prev[n]+1, last_builds[n]+1)) for n in last_builds.keys()
+        n: list(range(prev[n] + 1, last_builds[n] + 1)) for n in last_builds.keys()
     }
     start_dir = os.path.abspath(os.curdir)
-    os.makedirs('data', exist_ok=True)
-    os.chdir('data')
+    os.makedirs("data", exist_ok=True)
+    os.chdir("data")
     download_artifacts(projects)
     problems = push_results(projects)
     for proj, builds in projects.items():
         if builds:
             last_builds[proj] = builds[-1]
     os.chdir(start_dir)
-    with open('previous_pulls.json', 'wt', encoding='utf-8') as f:
+    with open("previous_pulls.json", "wt", encoding="utf-8") as f:
         f.write(json.dumps(last_builds, indent=4, sort_keys=True))
     if problems:
-        print('\n'.join(problems))
+        print("\n".join(problems))
         raise SystemExit("There were problems. See logs")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

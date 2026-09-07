@@ -1,13 +1,14 @@
 """Interface for managing Debian packages on devices."""
 
 import logging
-from typing import Iterable
+from collections.abc import Iterable
+from typing import ClassVar
 
 from invoke import Result
 
-from toolbox.results import BooleanResult
 from toolbox.interfaces import DeviceInterface
-from toolbox.retries import retry, RetryPolicy
+from toolbox.results import BooleanResult
+from toolbox.retries import RetryPolicy, retry
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +16,7 @@ logger = logging.getLogger(__name__)
 class DebInterface(DeviceInterface):
     """Provides Debian package management capabilities for devices."""
 
-    options = [
+    options: ClassVar[list[str]] = [
         "-o",
         "Dpkg::Options::=--force-confdef",
         "-o",
@@ -23,7 +24,7 @@ class DebInterface(DeviceInterface):
     ]
 
     # to be monitored, suggesting package management operations are ongoing
-    files = [
+    files: ClassVar[list[str]] = [
         "/var/lib/apt/lists/lock",
         "/var/lib/dpkg/lock",
         "/var/lib/dpkg/lock-frontend",

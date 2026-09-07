@@ -12,12 +12,12 @@ https://certification.canonical.com/hardware/202309-32084/submission/360899/
 """
 
 import argparse
-from requests import get
 import os
 import pathlib
 import tarfile
 import tempfile
 
+from requests import get
 
 SESSION_ID = ""
 

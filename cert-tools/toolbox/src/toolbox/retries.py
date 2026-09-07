@@ -1,11 +1,11 @@
 """Retry mechanisms with configurable policies."""
 
-from abc import ABC, abstractmethod
-from itertools import repeat
 import logging
+from abc import ABC, abstractmethod
+from collections.abc import Callable
+from itertools import repeat
 from time import sleep
-from typing import Any, Callable
-
+from typing import Any
 
 logger = logging.getLogger(__name__)
 

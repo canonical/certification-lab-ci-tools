@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from pathlib import Path
 from typing import NamedTuple
+
 import yaml
 
 from toolbox.entities.connections import PlugDict, SlotDict, SnapConnection

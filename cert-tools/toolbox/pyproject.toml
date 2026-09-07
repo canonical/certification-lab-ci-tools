@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=64", "wheel"]
+requires = ["setuptools>=84.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
@@ -17,7 +17,7 @@ dependencies = [
     "packaging",
     "pyyaml",
     "pygithub",
-    "fabric>=3.2.2",
+    "fabric>=3.2.3",
 ]
 [project.scripts]
 wait-for-ssh = "toolbox.cli.wait_for_ssh:main"

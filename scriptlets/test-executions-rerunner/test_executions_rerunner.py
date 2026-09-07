@@ -6,22 +6,25 @@ renamed or moved. Dependencies used by this script must be installed on jenkins.
 Note also that jenkins uses python 3.8
 """
 
+from __future__ import annotations
+
+import logging
+import re
 from abc import ABC, abstractmethod
 from argparse import ArgumentParser
 from functools import partial
-import logging
 from os import environ
-import re
-from typing import Dict, List, Optional, NamedTuple
+from typing import NamedTuple
+from urllib.parse import urlparse
 
 from requests import Session
 from requests.adapters import HTTPAdapter
 from requests.auth import HTTPBasicAuth
 from requests.exceptions import HTTPError
 from urllib3.util import Retry
-from urllib.parse import urlparse
 
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 requests = Session()
@@ -43,21 +46,20 @@ class TestObserverInterface:
 
     def __init__(
         self,
-        family: Optional[str] = None,
-        limit: Optional[int] = None,
-        api_token: Optional[str] = None,
+        family: str | None = None,
+        limit: int | None = None,
+        api_token: str | None = None,
     ):
         # at the moment there is a single Test Observer deployment but
         # the rerun endpoint could be a constructor argument in the future
         self.reruns_endpoint = (
-            "https://test-observer-api.canonical.com/v1/"
-            "test-executions/reruns"
+            "https://test-observer-api.canonical.com/v1/test-executions/reruns"
         )
         self.family = family
         self.limit = limit
         self.api_token = api_token
 
-    def create_auth_headers(self) -> Dict:
+    def create_auth_headers(self) -> dict:
         """
         Create the authorization headers for Test Observer API requests.
 
@@ -67,19 +69,17 @@ class TestObserverInterface:
             return {"Authorization": f"Bearer {self.api_token}"}
         return {}
 
-    def create_get_params(self) -> Dict:
+    def create_get_params(self) -> dict:
         """
         Return the query parameters for the GET request that
         retrieves the rerun requests from Test Observer
         """
         params = {"family": self.family, "limit": self.limit}
         return {
-            parameter: value
-            for parameter, value in params.items()
-            if value is not None
+            parameter: value for parameter, value in params.items() if value is not None
         }
 
-    def get(self) -> List[dict]:
+    def get(self) -> list[dict]:
         """
         Return the rerun requests currently queued in Test Observer.
 
@@ -93,7 +93,7 @@ class TestObserverInterface:
         response.raise_for_status()
         return response.json()
 
-    def delete(self, test_execution_ids: List[int]) -> None:
+    def delete(self, test_execution_ids: list[int]) -> None:
         """
         Remove a collection of rerun requests from Test Observer,
         as specified by their test execution IDs.
@@ -121,8 +121,9 @@ class PostArguments(NamedTuple):
     This is what the `RequestProcessor` class (below) produces
     when it processes a rerun request.
     """
+
     url: str
-    json: Optional[Dict] = None
+    json: dict | None = None
 
 
 class RequestProcessor(ABC):
@@ -131,7 +132,7 @@ class RequestProcessor(ABC):
     triggering the corresponding reruns.
     """
 
-    def __init__(self, constant_post_arguments: Dict):
+    def __init__(self, constant_post_arguments: dict):
         # these arguments will be part of any POST that triggers a rerun
         # (suitable e.g. for authorization)
         self.constant_post_arguments = constant_post_arguments
@@ -158,7 +159,7 @@ class RequestProcessor(ABC):
             for field, value in post_arguments._asdict().items()
             if value is not None
         }
-        logging.info("POST %s", post_arguments_dict)
+        logger.info("POST %s", post_arguments_dict)
         response = requests.post(
             **{**self.constant_post_arguments, **post_arguments_dict}
         )
@@ -189,8 +190,7 @@ class JenkinsProcessor(RequestProcessor):
             ) from error
         if not ci_link:
             raise RequestProccesingError(
-                f"{type(self).__name__} empty ci_link "
-                f"in rerun request {rerun_request}"
+                f"{type(self).__name__} empty ci_link in rerun request {rerun_request}"
             )
         # extract the rerun URL from the ci_link
         url = self.extract_rerun_url_from_ci_link(ci_link)
@@ -204,10 +204,7 @@ class JenkinsProcessor(RequestProcessor):
                 f"in rerun request {rerun_request}"
             ) from error
         if family == "deb":
-            json = {
-                "TEST_OBSERVER_REPORTING": True,
-                "TESTPLAN": "full"
-            }
+            json = {"TEST_OBSERVER_REPORTING": True, "TESTPLAN": "full"}
         elif family == "snap":
             json = {
                 "TEST_OBSERVER_REPORTING": True,
@@ -252,12 +249,12 @@ class GithubProcessor(RequestProcessor):
     # what the path of Gitgub workflow run looks like
     path_template = r"canonical/(?P<repo>[\w-]+)/actions/runs/(?P<run_id>\d+)/job/\d+"
 
-    def __init__(self, api_token: str, repo: Optional[str] = None):
+    def __init__(self, api_token: str, repo: str | None = None):
         super().__init__(
             {
                 "headers": {
                     "Accept": "application/vnd.github+json",
-                    "Authorization": f"Bearer {api_token}"
+                    "Authorization": f"Bearer {api_token}",
                 }
             }
         )
@@ -273,8 +270,7 @@ class GithubProcessor(RequestProcessor):
             ) from error
         if not ci_link:
             raise RequestProccesingError(
-                f"{type(self).__name__} empty ci_link "
-                f"in rerun request {rerun_request}"
+                f"{type(self).__name__} empty ci_link in rerun request {rerun_request}"
             )
         url = self.extract_rerun_url_from_ci_link(ci_link)
         return PostArguments(url=url)
@@ -293,7 +289,7 @@ class GithubProcessor(RequestProcessor):
             raise RequestProccesingError(
                 f"{type(self).__name__} cannot process ci_link {ci_link}"
             )
-        repo = match.group('repo')
+        repo = match.group("repo")
         if self.repo and self.repo != repo:
             raise RequestProccesingError(
                 f"{type(self).__name__} repository in ci_link {ci_link}"
@@ -306,35 +302,27 @@ class GithubProcessor(RequestProcessor):
         )
 
 
-# the Rerunner class (below) maps TestObserver execution IDs to
-# the POST arguments that would trigger the corresponding rerun
-ProcessedRequests = Dict[int, PostArguments]
-
-
 class Rerunner:
     """
     Collect rerun requests from Test Observer and trigger the
     corresponding reruns.
     """
 
-    def __init__(
-        self, interface: TestObserverInterface, processor: RequestProcessor
-    ):
+    def __init__(self, interface: TestObserverInterface, processor: RequestProcessor):
         self.test_observer = interface
         self.processor = processor
 
-    def load_rerun_requests(self) -> List[Dict]:
+    def load_rerun_requests(self) -> list[dict]:
         """
         Return rerun requests retrieved from Test Observer
         """
         rerun_requests = self.test_observer.get()
-        logging.info(
-            "Received the following rerun requests:\n%s",
-            str(rerun_requests)
-        )
+        logger.info("Received the following rerun requests:\n%s", str(rerun_requests))
         return rerun_requests
 
-    def process_rerun_requests(self, rerun_requests: List[Dict]) -> ProcessedRequests:
+    def process_rerun_requests(
+        self, rerun_requests: list[dict]
+    ) -> dict[int, PostArguments]:
         """
         Process a list of rerun requests, selecting the ones that the
         processor can handle.
@@ -342,22 +330,24 @@ class Rerunner:
         Return a dict that maps execution IDs to the arguments required
         to trigger the corresponding rerun.
         """
-        processed_requests: ProcessedRequests = {}
+        processed_requests: dict[int, PostArguments] = {}
         for rerun_request in rerun_requests:
             try:
                 post_arguments = self.processor.process(rerun_request)
             except RequestProccesingError:
-                logging.warning(
+                logger.warning(
                     "%s is unable to process this rerun request:\n%s",
                     type(self.processor).__name__,
-                    str(rerun_request)
+                    str(rerun_request),
                 )
             else:
                 execution_id = rerun_request["test_execution_id"]
                 processed_requests[execution_id] = post_arguments
         return processed_requests
 
-    def submit_processed_requests(self, processed_requests: ProcessedRequests) -> List[int]:
+    def submit_processed_requests(
+        self, processed_requests: dict[int, PostArguments]
+    ) -> list[int]:
         """
         Use the data generated by `process_rerun_requests` to trigger reruns.
         Return a list of Test Observer execution IDs corresponding to the
@@ -369,11 +359,11 @@ class Rerunner:
                 self.processor.submit(post_arguments)
             except HTTPError as error:
                 # unable to POST: log the error
-                logging.error(
+                logger.error(
                     "Response %s posting %s to %s",
                     error,
                     str(post_arguments),
-                    type(self.processor).__name__
+                    type(self.processor).__name__,
                 )
             else:
                 # mark this request as successfully serviced
@@ -381,7 +371,7 @@ class Rerunner:
                 execution_ids_submitted_requests.append(execution_id)
         return execution_ids_submitted_requests
 
-    def delete_rerun_requests(self, execution_ids: List[int]) -> None:
+    def delete_rerun_requests(self, execution_ids: list[int]) -> None:
         """
         Remove a list of rerun requests from Test Observer (as specified by
         their execution IDs).
@@ -389,10 +379,10 @@ class Rerunner:
         if not execution_ids:
             return
         # sort the execution ids so that they are easier to locate in the log
-        self.test_observer.delete((deleted := sorted(execution_ids)))
-        logging.info(
+        self.test_observer.delete(deleted := sorted(execution_ids))
+        logger.info(
             "Deleted rerun requests with execution ids: %s",
-            ", ".join(map(str, deleted))
+            ", ".join(map(str, deleted)),
         )
 
     def run(self):
@@ -406,30 +396,30 @@ class Rerunner:
 
 
 def create_rerunner_from_args():
-    parser = ArgumentParser(
-        description="Process Test Observer rerun requests"
+    parser = ArgumentParser(description="Process Test Observer rerun requests")
+    parser.add_argument(
+        "processor",
+        choices=["jenkins", "github"],
+        nargs="?",
+        default="jenkins",
+        help="Specify which request rerun processor to use",
     )
     parser.add_argument(
-        "processor", choices=["jenkins", "github"],
-        nargs="?", default="jenkins",
-        help="Specify which request rerun processor to use"
+        "--family",
+        help="Restrict processing to a specific family of artifacts",
     )
     parser.add_argument(
-        "--family", help="Restrict processing to a specific family of artifacts"
-    )
-    parser.add_argument(
-        "--limit", help="Restrict processing to a specific number of rerun requests"
+        "--limit",
+        help="Restrict processing to a specific number of rerun requests",
     )
     # only for Github processor but too simple to justify using subparsers
-    parser.add_argument(
-        "--repo", help="Name of Github repository"
-    )
+    parser.add_argument("--repo", help="Name of Github repository")
     args = parser.parse_args()
 
     if args.processor == "jenkins":
         processor = JenkinsProcessor(
             environ.get("JENKINS_USERNAME") or "admin",
-            environ["JENKINS_API_TOKEN"]
+            environ["JENKINS_API_TOKEN"],
         )
     else:
         processor = GithubProcessor(environ["GH_TOKEN"], repo=args.repo)
@@ -440,7 +430,7 @@ def create_rerunner_from_args():
             limit=args.limit,
             api_token=environ.get("TEST_OBSERVER_API_KEY"),
         ),
-        processor=processor
+        processor=processor,
     )
 
 

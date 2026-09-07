@@ -23,6 +23,11 @@ class Commit(NamedTuple):
 class TestCheckboxVersionHelper:
     """Tests for CheckboxVersionHelper."""
 
+    @pytest.fixture(autouse=True)
+    def mock_github(self, mocker):
+        """Prevent helper construction from accessing the GitHub API."""
+        mocker.patch("toolbox.checkbox.helpers.github.Github")
+
     @pytest.mark.parametrize(
         "version_string,expected_release,expected_offset",
         [

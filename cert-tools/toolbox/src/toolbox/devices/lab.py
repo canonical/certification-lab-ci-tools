@@ -2,14 +2,14 @@
 
 import logging
 import os
-from typing import Iterable
+from collections.abc import Iterable
+from typing import ClassVar
 
 from fabric.config import Config
 from paramiko.config import SSHConfig
 
 from toolbox.devices import RemoteHost
 from toolbox.interfaces import DeviceInterface
-
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ class LabExecutionError(RuntimeError):
 class LabDevice(RemoteHost):
     """Remote lab device configured through DEVICE_IP and DEVICE_USER."""
 
-    ssh_options = [
+    ssh_options: ClassVar[list[str]] = [
         "StrictHostKeyChecking=no",
         "UserKnownHostsFile=/dev/null",
         "ConnectTimeout=10",

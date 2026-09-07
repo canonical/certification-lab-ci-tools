@@ -1,10 +1,10 @@
-from argparse import ArgumentParser
 import sys
+from argparse import ArgumentParser
 
 from toolbox.devices.lab import LabDevice
 from toolbox.interfaces.reboot import RebootInterface
-from toolbox.interfaces.snaps import SnapInterface
 from toolbox.interfaces.snapd import SnapdAPIClient
+from toolbox.interfaces.snaps import SnapInterface
 from toolbox.interfaces.status import SystemStatusInterface
 from toolbox.retries import Linear
 

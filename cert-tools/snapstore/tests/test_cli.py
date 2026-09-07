@@ -1,7 +1,7 @@
 from pytest import mark, raises
 
+from snapstore.cli import _get_refresh_info, _get_snap_info, get_info_arguments
 from snapstore.info import SnapstoreInfo
-from snapstore.cli import get_info_arguments, _get_snap_info, _get_refresh_info
 
 
 class TestGetInfoArguments:

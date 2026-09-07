@@ -9,7 +9,6 @@ Example usage:
 """
 
 import sys
-
 from argparse import ArgumentParser, ArgumentTypeError
 from subprocess import check_call
 

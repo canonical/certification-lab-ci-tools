@@ -8,8 +8,8 @@ status when the booted version cannot be determined or does not match the
 expected version, so the caller can fail the job.
 """
 
-from argparse import ArgumentParser
 import sys
+from argparse import ArgumentParser
 
 from toolbox.devices.lab import LabDevice
 

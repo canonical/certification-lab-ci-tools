@@ -59,11 +59,12 @@ to check if both snaps and packages are available would be:
 """
 
 import argparse
-import requests
 import sys
 import time
+from typing import Dict, List, NamedTuple
+
+import requests
 import yaml
-from typing import NamedTuple, List, Dict
 
 from snap_info_utility import get_snap_info_from_store
 
@@ -136,8 +137,7 @@ def is_snap_available(snap_spec: SnapSpec, store_response: dict) -> bool:
             )
 
     return any(
-        matches_spec(channel_info)
-        for channel_info in store_response["channel-map"]
+        matches_spec(channel_info) for channel_info in store_response["channel-map"]
     )
 
 
@@ -163,9 +163,7 @@ def check_snaps_availability(
                     snap_spec.name
                 )
             store_response = local_store_cache[snap_spec.name]
-            snaps_available[snap_spec] = is_snap_available(
-                snap_spec, store_response
-            )
+            snaps_available[snap_spec] = is_snap_available(snap_spec, store_response)
 
         except (requests.RequestException, RuntimeError) as exc:
             # Handle request exceptions but continue the loop.
@@ -184,8 +182,7 @@ def check_snaps_availability(
         print("-" * 32)
         for snap_spec in not_available:
             print(
-                f"{snap_spec.name:<10} | {snap_spec.channel:<11} | "
-                f"{snap_spec.arch:<5}"
+                f"{snap_spec.name:<10} | {snap_spec.channel:<11} | {snap_spec.arch:<5}"
             )
         print("-" * 32 + "\n")
     else:
@@ -268,14 +265,10 @@ def check_packages_availability(
         print("All packages were found.")
 
 
-def check_availability(
-    snap_specs: list, package_specs: list, timeout: int
-) -> None:
+def check_availability(snap_specs: list, package_specs: list, timeout: int) -> None:
     # Dict to store whether each snap and package is available.
     snaps_available = {snap_spec: False for snap_spec in snap_specs}
-    packages_available = {
-        package_spec: False for package_spec in package_specs
-    }
+    packages_available = {package_spec: False for package_spec in package_specs}
     # Set the deadline.
     deadline = time.time() + timeout
     while True:

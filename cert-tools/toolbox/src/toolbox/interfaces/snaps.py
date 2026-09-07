@@ -1,7 +1,7 @@
 """Interface for managing snap packages on devices."""
 
-from functools import partial
 import logging
+from functools import partial
 
 from toolbox.entities.snaps import SnapSpecifier
 from toolbox.interfaces import DeviceInterface
@@ -9,7 +9,7 @@ from toolbox.interfaces.reboot import RebootInterface
 from toolbox.interfaces.snapd import SnapdAPIClient, SnapdAPIError
 from toolbox.interfaces.status import SystemStatusInterface
 from toolbox.results import BooleanResult
-from toolbox.retries import retry, RetryPolicy
+from toolbox.retries import RetryPolicy, retry
 
 logger = logging.getLogger(__name__)
 

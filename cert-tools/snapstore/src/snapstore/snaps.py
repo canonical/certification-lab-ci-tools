@@ -1,5 +1,5 @@
 import re
-from dataclasses import dataclass, astuple
+from dataclasses import astuple, dataclass
 
 
 @dataclass(frozen=True)

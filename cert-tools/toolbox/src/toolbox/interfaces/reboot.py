@@ -4,7 +4,6 @@ import logging
 
 from toolbox.interfaces import DeviceInterface
 
-
 logger = logging.getLogger(__name__)
 
 

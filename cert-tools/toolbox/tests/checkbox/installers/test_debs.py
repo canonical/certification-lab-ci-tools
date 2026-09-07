@@ -2,12 +2,12 @@
 
 import pytest
 
+from tests.devices.trivial import TrivialDevice
 from toolbox.checkbox.installers import CheckboxInstallerError
 from toolbox.checkbox.installers.debs import CheckboxDebsInstaller
 from toolbox.entities.risk import Risk
 from toolbox.interfaces.debs import DebInterface
 from toolbox.results import BooleanResult
-from tests.devices.trivial import TrivialDevice
 
 
 class TestCheckboxDebsInstaller:

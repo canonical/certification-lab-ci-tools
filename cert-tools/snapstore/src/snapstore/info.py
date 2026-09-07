@@ -1,4 +1,4 @@
-from typing import Iterable
+from collections.abc import Iterable
 
 from snapstore.client import SnapstoreClient
 from snapstore.snaps import SnapSpecifier

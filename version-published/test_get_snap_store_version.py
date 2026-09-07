@@ -25,17 +25,13 @@ class TestSnapScript(unittest.TestCase):
     @patch("get_snap_store_version.get_snap_info_from_store")
     def test_get_latest_version_beta(self, mock_get_info):
         mock_get_info.return_value = self.mock_snap_info
-        version = get_snap_store_version.get_latest_version(
-            self.mock_snap_info, "beta"
-        )
+        version = get_snap_store_version.get_latest_version(self.mock_snap_info, "beta")
         self.assertEqual(version, "1.1.0-dev23")
 
     @patch("get_snap_store_version.get_snap_info_from_store")
     def test_get_latest_version_edge(self, mock_get_info):
         mock_get_info.return_value = self.mock_snap_info
-        version = get_snap_store_version.get_latest_version(
-            self.mock_snap_info, "edge"
-        )
+        version = get_snap_store_version.get_latest_version(self.mock_snap_info, "edge")
         self.assertEqual(version, "1.2.0-dev40")
 
     @patch("get_snap_store_version.get_snap_info_from_store")

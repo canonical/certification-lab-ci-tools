@@ -1,19 +1,20 @@
 import json
-import pytest
+import logging
 from io import StringIO
 from pathlib import Path
 from textwrap import dedent
-from unittest.mock import patch, mock_open
-import logging
+from unittest.mock import mock_open, patch
+
+import pytest
 
 # Import the module
 from toolbox import snap_connections
 from toolbox.snap_connections import (
-    Connection,
-    Predicate,
-    Connector,
     Blacklist,
+    Connection,
+    Connector,
     MatchAttributes,
+    Predicate,
     PredicateCheckResult,
 )
 
@@ -193,7 +194,7 @@ class TestConnector:
 
         # Should only find one connection from allowed-snap
         assert len(connections) == 1
-        connection = list(connections)[0]
+        connection = next(iter(connections))
         assert connection.plug_snap == "allowed-snap"
 
     def test_process_multiple_slots_per_plug(self):
@@ -724,7 +725,7 @@ class TestMainFunction:
 
         # Verify only the allowed connection was returned
         assert len(connections) == 1
-        connection = list(connections)[0]
+        connection = next(iter(connections))
         assert connection.plug_snap == "allowed-snap"
 
         # Verify the blacklist log message was generated

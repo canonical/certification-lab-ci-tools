@@ -2,33 +2,25 @@
 
 import pytest
 
-from toolbox.interfaces import DeviceInterface, DeviceInterfaceError
 from toolbox.devices.registry import DeviceInterfaceRegistry
+from toolbox.interfaces import DeviceInterface, DeviceInterfaceError
 
 
 # Test interface classes
 class InterfaceA(DeviceInterface):
     """Test interface with no dependencies."""
 
-    pass
-
 
 class InterfaceB(DeviceInterface):
     """Test interface with no dependencies."""
-
-    pass
 
 
 class InterfaceC(DeviceInterface, requires=(InterfaceA,)):
     """Test interface that requires InterfaceA."""
 
-    pass
-
 
 class InterfaceD(DeviceInterface, requires=(InterfaceA, InterfaceB)):
     """Test interface that requires both InterfaceA and InterfaceB."""
-
-    pass
 
 
 class TestDeviceInterfaceRegistry:
