@@ -59,7 +59,7 @@ class CheckboxVersionHelper:
         Some versions of Checkbox are isolated to their own branch, this
         returns the name of the appropriate branch or `main` if none.
         """
-        isolated = {"16", "24"}
+        isolated = {"16"}
         if checkbox_major in isolated:
             logger.info(f"Using release branch release/{checkbox_major}")
             return f"release/{checkbox_major}"

@@ -185,7 +185,7 @@ class TestCheckboxVersionHelper:
         with pytest.raises(ValueError, match="Unable to locate a previous tag"):
             helper.get_commit_for_version("3.0.0", "22")
 
-    @pytest.mark.parametrize("checkbox_major", ["16", "24"])
+    @pytest.mark.parametrize("checkbox_major", ["16"])
     def test_get_commit_for_version_uses_release_branch(self, mocker, checkbox_major):
         """Test isolated Checkbox versions use their release branch."""
         mock_repo = mocker.Mock()
