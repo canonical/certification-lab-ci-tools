@@ -11,21 +11,16 @@ required-snaps:
   - name: checkbox18
     channels: [ latest/edge ]
     architectures: [ amd64, arm64, armhf ]
-  - name: checkbox16
-    channels: [ latest/edge ]
-    architectures: [ amd64, arm64, armhf ]
   - name: checkbox
     channels:
       - "uc24/edge"
       - "uc22/edge"
       - "uc20/edge"
       - "uc18/edge"
-      - "uc16/edge"
       - "24.04/edge"
       - "22.04/edge"
       - "20.04/edge"
       - "18.04/edge"
-      - "16.04/edge"
     architectures: [ amd64, arm64, armhf ]
 
 required-packages:
