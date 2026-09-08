@@ -3,7 +3,10 @@
 import logging
 from typing import ClassVar
 
-from toolbox.checkbox.installers import CheckboxInstaller, CheckboxInstallerError
+from toolbox.checkbox.installers import (
+    CheckboxInstaller,
+    CheckboxInstallerError,
+)
 from toolbox.devices import Device
 from toolbox.entities.risk import Risk
 from toolbox.interfaces.debs import DebInterface
@@ -51,6 +54,10 @@ class CheckboxDebsInstaller(CheckboxInstaller):
         super().__init__(device=device, agent=agent)
         self.risk = risk
         self.additional_providers = providers or []
+
+    def get_checkbox_major(self):
+        os_version = self.device.run(["cat", "/etc/os-release"], hide=True).stdout
+        return os_version.split('VERSION_ID="', maxsplit=1)[-1][:2]
 
     @property
     def checkbox_cli(self):

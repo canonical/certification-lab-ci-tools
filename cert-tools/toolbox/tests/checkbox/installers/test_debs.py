@@ -13,6 +13,22 @@ from toolbox.results import BooleanResult
 class TestCheckboxDebsInstaller:
     """Tests for CheckboxDebsInstaller."""
 
+    @pytest.mark.parametrize(
+        "version_id,expected_major", [("16.04", "16"), ("24.04", "24")]
+    )
+    def test_get_checkbox_major(self, mocker, version_id, expected_major):
+        """Test extracting the Checkbox major from the OS version."""
+        device = TrivialDevice()
+        device.run = mocker.Mock(
+            return_value=mocker.Mock(
+                stdout=f'NAME="Ubuntu"\nVERSION_ID="{version_id}"\n'
+            )
+        )
+        installer = CheckboxDebsInstaller(device, TrivialDevice(), Risk.STABLE)
+
+        assert installer.get_checkbox_major() == expected_major
+        device.run.assert_called_once_with(["cat", "/etc/os-release"], hide=True)
+
     def test_add_repositories_success(self, mocker):
         """Test adding repositories successfully."""
         device = TrivialDevice(interfaces=[DebInterface()])

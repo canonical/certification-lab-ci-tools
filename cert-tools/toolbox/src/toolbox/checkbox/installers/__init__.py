@@ -29,7 +29,8 @@ class CheckboxInstaller(ABC):
     def check_service(self):
         """Check that the Checkbox service is active on the device."""
         logger.info(
-            "Checking if the Checkbox service is active on %s", self.device.host
+            "Checking if the Checkbox service is active on %s",
+            self.device.host,
         )
         # Old providers use: "checkbox-cli-wrapper slave" which is deprecated.
         slave_active = (
@@ -54,6 +55,13 @@ class CheckboxInstaller(ABC):
                 f"Checkbox service is not active on {self.device.host}"
             )
 
+    @abstractmethod
+    def get_checkbox_major(self) -> str:
+        """
+        Returns the base of Checkbox/system being installed
+        """
+        raise NotImplementedError
+
     def get_version(self) -> str:
         """Get the Checkbox version installed on the device."""
         result = self.device.run([self.checkbox_cli, "--version"])
@@ -66,9 +74,12 @@ class CheckboxInstaller(ABC):
     def install_from_source_on_agent(self, version: str):
         """Install matching Checkbox version from source on the agent using pipx."""
         logger.info(
-            "Installing Checkbox %s on the agent container from source", version
+            "Installing Checkbox %s on the agent container from source",
+            version,
         )
-        commit = CheckboxVersionHelper().get_commit_for_version(version)
+        commit = CheckboxVersionHelper().get_commit_for_version(
+            version, self.get_checkbox_major()
+        )
         self.agent.run(
             [
                 "pipx",

@@ -18,6 +18,10 @@ class ConcreteInstaller(CheckboxInstaller):
     def install_on_device(self, *args, **kwargs):
         """Mock installation on device."""
 
+    def get_checkbox_major(self):
+        """Return the Checkbox major version."""
+        return "22"
+
 
 class TestCheckboxInstaller:
     """Tests for CheckboxInstaller."""
@@ -117,7 +121,7 @@ class TestCheckboxInstaller:
         installer = ConcreteInstaller(TrivialDevice(), agent)
         installer.install_from_source_on_agent("4.0.0.dev42")
 
-        mock_helper.get_commit_for_version.assert_called_once_with("4.0.0.dev42")
+        mock_helper.get_commit_for_version.assert_called_once_with("4.0.0.dev42", "22")
         agent.run.assert_called_once_with(
             [
                 "pipx",
