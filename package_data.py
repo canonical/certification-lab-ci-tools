@@ -23,6 +23,7 @@ import string
 import time
 from multiprocessing.pool import Pool
 from pathlib import Path
+from typing import Optional
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
@@ -86,7 +87,7 @@ def _parse_package_name_version(package_spec: str) -> tuple:
     raise ValueError(f"Unable to parse package_spec '{package_spec}'")
 
 
-def parse_package_name_version(package_spec: str) -> tuple | None:
+def parse_package_name_version(package_spec: str) -> Optional[tuple]:
     try:
         return _parse_package_name_version(package_spec)
     except ValueError as e:
