@@ -109,7 +109,7 @@ class TestCheckboxInstaller:
     def test_install_from_source_on_agent(self, mocker):
         """Test installing Checkbox from source on agent."""
         agent = TrivialDevice()
-        agent.run = mocker.Mock()
+        agent.run = mocker.Mock(return_value=Result(stdout="", exited=0))
         mock_helper = mocker.Mock()
         mock_helper.get_commit_for_version.return_value = "abc123def456"
 
@@ -130,3 +130,24 @@ class TestCheckboxInstaller:
                 "--force",
             ]
         )
+
+    def test_install_from_source_on_agent_failure(self, mocker):
+        """Test install_from_source_on_agent raises error when the pipx
+        install command fails (e.g. a network issue cloning the repo)."""
+        agent = TrivialDevice()
+        agent.run = mocker.Mock(return_value=None)
+        mock_helper = mocker.Mock()
+        mock_helper.get_commit_for_version.return_value = "abc123def456"
+
+        mocker.patch(
+            "toolbox.checkbox.installers.CheckboxVersionHelper",
+            return_value=mock_helper,
+        )
+
+        installer = ConcreteInstaller(TrivialDevice(), agent)
+
+        with pytest.raises(
+            CheckboxInstallerError,
+            match=f"Failed to install Checkbox 4.0.0.dev42 from source on {agent.host}",
+        ):
+            installer.install_from_source_on_agent("4.0.0.dev42")

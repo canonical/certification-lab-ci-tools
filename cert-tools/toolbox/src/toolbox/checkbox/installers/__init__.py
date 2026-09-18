@@ -80,7 +80,7 @@ class CheckboxInstaller(ABC):
         commit = CheckboxVersionHelper().get_commit_for_version(
             version, self.get_checkbox_major()
         )
-        self.agent.run(
+        result = self.agent.run(
             [
                 "pipx",
                 "install",
@@ -88,6 +88,10 @@ class CheckboxInstaller(ABC):
                 "--force",
             ]
         )
+        if not result:
+            raise CheckboxInstallerError(
+                f"Failed to install Checkbox {version} from source on {self.agent.host}"
+            )
 
     @abstractmethod
     def install_on_device(self, *args, **kwargs):  # pragma: no cover
