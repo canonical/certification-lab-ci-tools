@@ -14,10 +14,12 @@ them on re-runs.
 """
 
 import argparse
+import base64
 import itertools
 import json
 import logging
 import lzma
+import os
 import re
 import string
 import time
@@ -33,7 +35,13 @@ RETRY = 5
 CACHE = Path.cwd() / ".cache"
 
 
-def get_url(series, pocket, repo, arch) -> str:
+def get_url(series, pocket, repo, arch, archive_url=None) -> str:
+    if archive_url:
+        return (
+            f"{archive_url.rstrip('/')}/dists/{series}/"
+            f"{repo}/binary-{arch}/Packages.xz"
+        )
+
     if arch.startswith("arm"):
         archive_url = "http://ports.ubuntu.com/ubuntu-ports/dists"
     else:
@@ -49,6 +57,14 @@ def download_package_xz(url: str, cache_path: Path) -> Path:
     cache_path.mkdir(parents=True, exist_ok=True)
 
     headers = {}
+    username = os.environ.get("PPA_USERNAME")
+    password = os.environ.get("PPA_PASSWORD")
+    if bool(username) != bool(password):
+        raise ValueError("PPA_USERNAME and PPA_PASSWORD must both be defined")
+    if username and password:
+        credentials = base64.b64encode(f"{username}:{password}".encode()).decode()
+        headers["Authorization"] = f"Basic {credentials}"
+
     if dest.exists() and meta_path.exists():
         meta = json.loads(meta_path.read_text())
         if "etag" in meta:
@@ -106,7 +122,7 @@ def parse_package_xz(path: Path) -> dict:
 
 
 def download_package_info_preserve(series_pocket_repo_arch) -> Path:
-    series, pocket, repo, arch = series_pocket_repo_arch
+    series, pocket, repo, arch, archive_url = series_pocket_repo_arch
     # If the JSON data already exists, read it so we can update it because
     # we want to preserve the latest seen version of each package even if
     # it's not in the Packages data because it migrated out of proposed
@@ -118,7 +134,7 @@ def download_package_info_preserve(series_pocket_repo_arch) -> Path:
     except FileNotFoundError:
         pass
 
-    url = get_url(series, pocket, repo, arch)
+    url = get_url(series, pocket, repo, arch, archive_url)
     for i in range(RETRY):
         try:
             path = download_package_xz(url, CACHE)
@@ -154,6 +170,13 @@ def parse_args():
         "--arch", required=True, nargs="+", help="Architecture (e.g. amd64)"
     )
     parser.add_argument(
+        "--archive-url",
+        help=(
+            "Archive root URL (e.g. https://ppa.launchpadcontent.net/"
+            "canonical-kernel-team/proposed/ubuntu)"
+        ),
+    )
+    parser.add_argument(
         "--sequential",
         help="Download sequentially to make debugging easier",
         action="store_true",
@@ -166,7 +189,7 @@ def main():
     series, pocket, repo, arch = args.series, args.pocket, args.repo, args.arch
 
     tot = len(series) * len(pocket) * len(repo) * len(arch)
-    to_do = itertools.product(series, pocket, repo, arch)
+    to_do = itertools.product(series, pocket, repo, arch, [args.archive_url])
 
     if args.sequential:
         res_path = map(download_package_info_preserve, to_do)
