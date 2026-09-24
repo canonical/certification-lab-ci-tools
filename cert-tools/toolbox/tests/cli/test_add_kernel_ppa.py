@@ -64,9 +64,7 @@ def main_device(mocker):
     return device, debs
 
 
-def test_main_uses_archive_proposed_by_default(
-    mocker, monkeypatch, main_device
-):
+def test_main_uses_archive_proposed_by_default(mocker, monkeypatch, main_device):
     device, _ = main_device
     monkeypatch.delenv("SOURCE_PACKAGE_DATA", raising=False)
     proposed_repository = mocker.patch.object(

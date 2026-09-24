@@ -64,11 +64,14 @@ def package_data_to_ppa_data(arch: str):
 
 
 def pinning_preferences(series: str) -> str:
-    return textwrap.dedent(f"""
+    return (
+        textwrap.dedent(f"""
         Package: *
         Pin: release o=Ubuntu,a={series}-proposed
         Pin-Priority: 500
-        """).strip() + "\n"
+        """).strip()
+        + "\n"
+    )
 
 
 def enable_archive_proposed(device, url, series):
