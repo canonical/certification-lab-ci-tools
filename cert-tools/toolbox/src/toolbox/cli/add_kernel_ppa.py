@@ -113,6 +113,7 @@ def main():
         raise SystemExit("ERROR: device did not return after reboot")
 
     ppa_data = package_data_to_ppa_data(args.arch)
+    print(f"Desired proposed URL:{ppa_data.url}")
     if ppa_data.username is None:
         enable_archive_proposed(device, ppa_data.url, args.series)
         return
