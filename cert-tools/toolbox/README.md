@@ -225,6 +225,7 @@ install-checkbox-snaps = "toolbox.cli.install_checkbox_snaps:main"
 install-checkbox-debs = "toolbox.cli.install_checkbox_debs:main"
 ensure-stable-snaps = "toolbox.cli.ensure_stable_snaps:main"
 ensure-kernel = "toolbox.cli.ensure_kernel:main"
+add-kernel-ppa = "toolbox.cli.add_kernel_ppa:main"
 setup_apt_cache_proxy = "toolbox.cli.setup_apt_cache_proxy:main"
 ```
 
@@ -241,6 +242,17 @@ can fail the job.
 ```bash
 # DEVICE_IP (and optionally DEVICE_USER / DEVICE_PWD) must be set
 ensure-kernel 6.8.0-130.130
+```
+
+### `add-kernel-ppa`
+
+Upgrades and reboots the device under test, waits for it to return, and enables
+the proposed pocket with pin priority 500. The architecture selects the Ubuntu
+archive (`amd64` and `i386`) or ports archive (all other architectures).
+
+```bash
+# DEVICE_IP (and optionally DEVICE_USER / DEVICE_PWD) must be set
+add-kernel-ppa amd64 noble
 ```
 
 ### `setup_apt_cache_proxy`
