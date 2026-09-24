@@ -13,9 +13,6 @@ from toolbox.interfaces.reboot import RebootInterface
 from toolbox.interfaces.status import SystemStatusInterface
 from toolbox.retries import Linear
 
-# this is used to override the "default" PPA url with (for example) proposed2
-SOURCE_PACKAGE_DATA = os.getenv("SOURCE_PACKAGE_DATA", "cert-package-data")
-
 PPAData = namedtuple("PPAData", ["url", "username", "password", "key"])
 
 # maps package data name to the ppa url
@@ -45,17 +42,18 @@ def proposed_repository(arch: str) -> str:
 
 
 def package_data_to_ppa_data(arch: str):
+    source_package_data = os.getenv("SOURCE_PACKAGE_DATA", "cert-package-data")
     try:
-        package_data_source = PACKAGE_DATA_MAP[SOURCE_PACKAGE_DATA]
+        package_data_source = PACKAGE_DATA_MAP[source_package_data]
     except KeyError:
         raise SystemExit(
-            f"Unknown package-data '{SOURCE_PACKAGE_DATA}': Update add_kernel_ppa.py"
+            f"Unknown package-data '{source_package_data}': Update add_kernel_ppa.py"
         )
     if not package_data_source:
         # default is archive proposed
         return PPAData(proposed_repository(arch), None, None, None)
     try:
-        credentials_suffix = int(SOURCE_PACKAGE_DATA[-1])
+        credentials_suffix = int(source_package_data[-1])
     except ValueError:
         credentials_suffix = ""
     # no user/pwd/key for public ppas
