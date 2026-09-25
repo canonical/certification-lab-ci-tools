@@ -7,6 +7,17 @@ import pytest
 from toolbox.cli import add_kernel_ppa
 
 
+@pytest.fixture(autouse=True)
+def package_data_map(monkeypatch):
+    package_data_map = {
+        "cert-package-data": None,
+        "cert-package-data-proposed2": "proposed2-url",
+        "cert-realtime-package-data": "realtime-url",
+    }
+    monkeypatch.setattr(add_kernel_ppa, "PACKAGE_DATA_MAP", package_data_map)
+    monkeypatch.setenv("PACKAGE_DATA_MAP", "defined")
+
+
 def test_package_data_to_ppa_data_uses_archive_proposed(mocker, monkeypatch):
     monkeypatch.setenv("SOURCE_PACKAGE_DATA", "cert-package-data")
     proposed_repository = mocker.patch.object(
@@ -20,19 +31,19 @@ def test_package_data_to_ppa_data_uses_archive_proposed(mocker, monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "package_data, suffix",
+    "package_data, credentials_suffix",
     [
-        ("cert-package-data-proposed2", "2"),
-        ("cert-realtime-package-data", ""),
+        ("cert-package-data-proposed2", "CERT_PACKAGE_DATA_PROPOSED2"),
+        ("cert-realtime-package-data", "CERT_REALTIME_PACKAGE_DATA"),
     ],
 )
-def test_package_data_to_ppa_data_uses_credential_suffix(
-    monkeypatch, package_data, suffix
+def test_package_data_to_ppa_data_uses_package_specific_credentials(
+    monkeypatch, package_data, credentials_suffix
 ):
     monkeypatch.setenv("SOURCE_PACKAGE_DATA", package_data)
-    monkeypatch.setenv(f"KERNEL_PPA_USERNAME{suffix}", "username")
-    monkeypatch.setenv(f"KERNEL_PPA_PASSWORD{suffix}", "password")
-    monkeypatch.setenv(f"KERNEL_PPA_KEY{suffix}", "key")
+    monkeypatch.setenv(f"KERNEL_PPA_USERNAME_{credentials_suffix}", "username")
+    monkeypatch.setenv(f"KERNEL_PPA_PASSWORD_{credentials_suffix}", "password")
+    monkeypatch.setenv(f"KERNEL_PPA_KEY_{credentials_suffix}", "key")
 
     result = add_kernel_ppa.package_data_to_ppa_data("amd64")
 
@@ -70,14 +81,12 @@ def test_main_uses_archive_proposed_by_default(mocker, monkeypatch, main_device)
     proposed_repository = mocker.patch.object(
         add_kernel_ppa, "proposed_repository", return_value="proposed-url"
     )
-    enable_archive_proposed = mocker.patch.object(
-        add_kernel_ppa, "enable_archive_proposed"
-    )
+    enable_public_ppa = mocker.patch.object(add_kernel_ppa, "enable_public_ppa")
 
     add_kernel_ppa.main()
 
     proposed_repository.assert_called_once_with("amd64")
-    enable_archive_proposed.assert_called_once_with(device, "proposed-url", "noble")
+    enable_public_ppa.assert_called_once_with(device, "proposed-url", "noble")
 
 
 def test_main_calls_legacy_script_for_authenticated_ppa(

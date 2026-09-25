@@ -1,5 +1,6 @@
 """Upgrade a lab device and enable its Ubuntu proposed pocket."""
 
+import json
 import os
 import subprocess
 import textwrap
@@ -15,24 +16,18 @@ from toolbox.retries import Linear
 
 PPAData = namedtuple("PPAData", ["url", "username", "password", "key"])
 
-# maps package data name to the ppa url
-# See: # https://docs.google.com/document/d/1-6yP0_iXrslAQFTGaP7ioPhSSYaCn39dVY9Oy_qXW9s/edit?usp=sharing
-private_ppa = "https://private-ppa.launchpadcontent.net"
-public_ppa = "https://ppa.launchpadcontent.net"
 
-PACKAGE_DATA_MAP = {
-    "cert-package-data": None,
-    "cert-package-data-proposed2": f"{public_ppa}/canonical-kernel-team/proposed2/ubuntu",
-    "cert-package-data-proposed3": f"{public_ppa}/canonical-kernel-team/proposed3/ubuntu",
-    "cert-esm-pakcage-data-proposed": f"{private_ppa}/canonical-kernel-esm/proposed/ubuntu",
-    "cert-esm-pakcage-data-proposed2": f"{private_ppa}/canonical-kernel-esm/proposed2/ubuntu",
-    "cert-esm-pakcage-data-proposed3": f"{private_ppa}/canonical-kernel-esm/proposed3/ubuntu",
-    "cert-realtime-package-data": f"{private_ppa}/ubuntu-advantage/realtime-proposed/ubuntu",
-    "cert-realtime-package-data2": f"{private_ppa}/canonical-kernel-rt/proposed2/ubuntu",
-    "cert-realtime-package-data-proposed3": f"{private_ppa}/canonical-kernel-rt/proposed3/ubuntu",
-    "cert-koto-package-data": f"{private_ppa}/canonical-hwe-private/renesas-proposed/ubuntu",
-    "cert-fips-updates-package-data": f"{private_ppa}/ubuntu-advantage/pro-fips-updates/ubuntu",
-}
+try:
+    PACKAGE_DATA_MAP = json.loads(os.getenv("PACKAGE_DATA_MAP", "{}"))
+except json.JSONDecodeError as e:
+    raise SystemExit(
+        textwrap.dedent(f"""
+            Unable to install kernel. Invalid PACKAGE_DATA_MAP provided:
+            {e}
+            Provided JSON:
+            {e.doc}
+            """).strip()
+    )
 
 
 def proposed_repository(arch: str) -> str:
@@ -42,6 +37,12 @@ def proposed_repository(arch: str) -> str:
 
 
 def package_data_to_ppa_data(arch: str):
+    """
+    Get the target PPA metadata from the environment
+
+    The relevant PPA metadata depends on the given package data that triggered
+    the job. The contract is that
+    """
     source_package_data = os.getenv("SOURCE_PACKAGE_DATA", "cert-package-data")
     try:
         package_data_source = PACKAGE_DATA_MAP[source_package_data]
@@ -52,14 +53,11 @@ def package_data_to_ppa_data(arch: str):
     if not package_data_source:
         # default is archive proposed
         return PPAData(proposed_repository(arch), None, None, None)
-    try:
-        credentials_suffix = int(source_package_data[-1])
-    except ValueError:
-        credentials_suffix = ""
+    credentials_suffix = source_package_data.replace("-", "_").upper()
     # no user/pwd/key for public ppas
-    username = os.getenv(f"KERNEL_PPA_USERNAME{credentials_suffix}", "")
-    password = os.getenv(f"KERNEL_PPA_PASSWORD{credentials_suffix}", "")
-    key = os.getenv(f"KERNEL_PPA_KEY{credentials_suffix}", "")
+    username = os.getenv(f"KERNEL_PPA_USERNAME_{credentials_suffix}", "")
+    password = os.getenv(f"KERNEL_PPA_PASSWORD_{credentials_suffix}", "")
+    key = os.getenv(f"KERNEL_PPA_KEY_{credentials_suffix}", "")
     return PPAData(package_data_source, username, password, key)
 
 
@@ -74,7 +72,7 @@ def pinning_preferences(series: str) -> str:
     )
 
 
-def enable_archive_proposed(device, url, series):
+def enable_public_ppa(device, url, series):
     print("Enabling proposed pocket...")
 
     proposed_repositories_list_path = (
@@ -92,36 +90,10 @@ def enable_archive_proposed(device, url, series):
         raise SystemExit(f"ERROR: failed to write {pinning_path}")
 
 
-def main():
-    parser = ArgumentParser(
-        description="Upgrade a lab device and enable its Ubuntu proposed pocket"
-    )
-    parser.add_argument("arch", help="Ubuntu architecture, for example amd64 or arm64")
-    parser.add_argument("series", help="Ubuntu series codename, for example noble")
-    args = parser.parse_args()
-
-    device = LabDevice(
-        interfaces=[DebInterface(), RebootInterface(), SystemStatusInterface()]
-    )
-    debs = device.interfaces[DebInterface]
-    if not debs.update():
-        raise SystemExit("ERROR: apt-get update failed")
-    if not debs.upgrade(options=["--allow-remove-essential"]):
-        raise SystemExit("ERROR: apt-get dist-upgrade failed")
-
-    device.interfaces[RebootInterface].reboot()
-    if not device.interfaces[SystemStatusInterface].wait_for_status(
-        allowed={"degraded"}, policy=Linear(times=19, delay=10)
-    ):
-        raise SystemExit("ERROR: device did not return after reboot")
-
-    ppa_data = package_data_to_ppa_data(args.arch)
-    print(f"Desired proposed URL:{ppa_data.url}")
-    if ppa_data.username is None:
-        enable_archive_proposed(device, ppa_data.url, args.series)
-        return
+def enable_private_ppa(device, ppa_data: PPAData):
     # TODO: replace this legacy script/check_calls with everything done in
     # this one instead
+    debs = device.interfaces[DebInterface]
     tools_path = Path(os.getenv("TOOLS_PATH", ""))
     subprocess.check_call(
         [
@@ -145,6 +117,47 @@ def main():
     debs.install(os.environ["CONCRETE_KERNEL"])
     # FIXME: find a way to get the kernel name so we can force boot to it
     # device.run(["sudo", "./switch_kernel.py" ...])
+
+
+def parse_args():
+    parser = ArgumentParser(
+        description="Upgrade a lab device and enable its Ubuntu proposed pocket"
+    )
+    parser.add_argument("arch", help="Ubuntu architecture, for example amd64 or arm64")
+    parser.add_argument("series", help="Ubuntu series codename, for example noble")
+    return parser.parse_args()
+
+
+def ensure_environment():
+    if not os.getenv("PACKAGE_DATA_MAP"):
+        raise SystemExit("Script requires 'PACKAGE_DATA_MAP' to be defined")
+
+
+def main():
+    args = parse_args()
+    ensure_environment()
+
+    device = LabDevice(
+        interfaces=[DebInterface(), RebootInterface(), SystemStatusInterface()]
+    )
+    debs = device.interfaces[DebInterface]
+    if not debs.update():
+        raise SystemExit("ERROR: apt-get update failed")
+    if not debs.upgrade(options=["--allow-remove-essential"]):
+        raise SystemExit("ERROR: apt-get dist-upgrade failed")
+
+    device.interfaces[RebootInterface].reboot()
+    if not device.interfaces[SystemStatusInterface].wait_for_status(
+        allowed={"degraded"}, policy=Linear(times=19, delay=10)
+    ):
+        raise SystemExit("ERROR: device did not return after reboot")
+
+    ppa_data = package_data_to_ppa_data(args.arch)
+    print(f"Desired proposed URL: {ppa_data.url}")
+    if ppa_data.username is None:
+        enable_public_ppa(device, ppa_data.url, args.series)
+    else:
+        enable_private_ppa(device, ppa_data)
 
 
 if __name__ == "__main__":
