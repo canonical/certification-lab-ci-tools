@@ -55,9 +55,9 @@ def package_data_to_ppa_data(arch: str):
         return PPAData(proposed_repository(arch), None, None, None)
     credentials_suffix = source_package_data.replace("-", "_").upper()
     # no user/pwd/key for public ppas
-    username = os.getenv(f"KERNEL_PPA_USERNAME_{credentials_suffix}", "")
-    password = os.getenv(f"KERNEL_PPA_PASSWORD_{credentials_suffix}", "")
-    key = os.getenv(f"KERNEL_PPA_KEY_{credentials_suffix}", "")
+    username = os.getenv(f"KERNEL_PPA_USERNAME_{credentials_suffix}")
+    password = os.getenv(f"KERNEL_PPA_PASSWORD_{credentials_suffix}")
+    key = os.getenv(f"KERNEL_PPA_KEY_{credentials_suffix}")
     return PPAData(package_data_source, username, password, key)
 
 
@@ -154,7 +154,7 @@ def main():
 
     ppa_data = package_data_to_ppa_data(args.arch)
     print(f"Desired proposed URL: {ppa_data.url}")
-    if ppa_data.username is None:
+    if not ppa_data.username:
         enable_public_ppa(device, ppa_data.url, args.series)
     else:
         enable_private_ppa(device, ppa_data)
