@@ -21,6 +21,7 @@ A _device_ represents a machine and is essentially the abstraction that
 allows you to run commands on the machine.
 
 There are different types of devices:
+
 - `LocalHost` represents the machine running the script
 - `RemoteDevice` represents a remote device where commands can be executed
   over SSH
@@ -58,7 +59,6 @@ Running commands locally doesn't directly involve using `subprocess` and
 running commands remotely doesn't involve dealing with how that is
 achieved over SSH. There is now a unified pattern for both.
 
-
 ### Interfaces
 
 A device _interface_ is a modular group of (related) operations that can be
@@ -67,6 +67,7 @@ _interfaces_ are attached to it, thus defining the operations that can be
 performed on the device.
 
 Examples of interfaces:
+
 - `RebootInterface`: reboot the device or check if a reboot is required
 - `SystemStatusInterface`: check the (systemd) status of the device and
   wait until it reaches an allowed state
@@ -225,6 +226,7 @@ install-checkbox-snaps = "toolbox.cli.install_checkbox_snaps:main"
 install-checkbox-debs = "toolbox.cli.install_checkbox_debs:main"
 ensure-stable-snaps = "toolbox.cli.ensure_stable_snaps:main"
 ensure-kernel = "toolbox.cli.ensure_kernel:main"
+add-kernel-ppa = "toolbox.cli.add_kernel_ppa:main"
 setup_apt_cache_proxy = "toolbox.cli.setup_apt_cache_proxy:main"
 ```
 
@@ -241,6 +243,27 @@ can fail the job.
 ```bash
 # DEVICE_IP (and optionally DEVICE_USER / DEVICE_PWD) must be set
 ensure-kernel 6.8.0-130.130
+```
+
+### `add-kernel-ppa`
+
+Handles kernel ppa additions. Defaults to the proper proposed pocket for the
+current series/arch combination but also handles the SOURCE_PACKAGE_DATA envvar.
+
+When SOURCE_PACKAGE_DATA is provided, the script decides depending on the value
+the proper PPA to enable. If the PPA is private, the script expects the
+credentials to be stored in the `KERNEL_PPA_USERNAME` and `KERNEL_PPA_PASSWORD`
+envvars with a numeral suffix compatible with the package data job.
+
+Example:
+
+```bash
+export SOURCE_PACKAGE_DATA=cert-esm-pakcage-data-proposed2
+export KERNEL_PPA_USERNAME="..."
+export KERNEL_PPA_USERNAME1="..."
+export KERNEL_PPA_USERNAME2="..."
+# In this situation, the esm 2 PPA will be enabled and KERNEL_PPA_USERNAME2
+# will be used
 ```
 
 ### `setup_apt_cache_proxy`
@@ -270,6 +293,7 @@ automated integration tests.
 
 Launch a named instance for any image you'd like to test with
 (e.g. `noble`, `core22`, etc.):
+
 ```
 IMAGE=core20
 DEVICE=device-$IMAGE
@@ -278,6 +302,7 @@ multipass launch $IMAGE --name $DEVICE --disk 10GB
 
 Set the instance up so that it can accept password-less SSH connections.
 You only need to perform this step once for a new image.
+
 ```
 echo "ubuntu:insecure" | multipass exec $DEVICE -- sudo chpasswd
 ssh-keygen -t rsa -b 4096 -f ~/.ssh/$DEVICE-key -N "" -C "temporary-$DEVICE-key"
@@ -287,6 +312,7 @@ cat ~/.ssh/$DEVICE-key.pub | multipass exec $DEVICE -- bash -c "cat >> /home/ubu
 Now you can set the `DEVICE_IP` environment variable to point to the
 instance's IP. Every time you create `LabDevice`, it will refer to this
 specific instance.
+
 ```
 export DEVICE_IP=$(multipass exec $DEVICE -- hostname -I | tr -d '[:space:]')
 ```
@@ -302,4 +328,5 @@ from toolbox.devices.lab import LabDevice
 device = LabDevice()
 device.run(["uname", "-n"])
 ```
+
 This should output `device-core20`.
