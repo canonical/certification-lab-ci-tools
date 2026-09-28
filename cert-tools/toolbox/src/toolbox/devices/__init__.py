@@ -1,5 +1,6 @@
 """Device abstractions for executing commands locally and remotely."""
 
+import io
 import logging
 import shlex
 from abc import ABC, abstractmethod
@@ -44,6 +45,14 @@ class Device(ABC):
     def run(self, command: CommandType, **kwargs) -> Result:  # pragma: no cover
         """Execute a command on the device."""
         raise NotImplementedError
+
+    def write_remote_file(self, path: str, contents: str, hide: bool = True) -> Result:
+        """Write contents to a root-owned file on the device."""
+        return self.run(
+            ["sudo", "tee", path],
+            in_stream=io.StringIO(contents),
+            hide=hide,
+        )
 
 
 class LocalHost(Device):
