@@ -145,6 +145,7 @@ def add_ppa_key(device, key: str) -> str:
     return keyring_file
 
 
+# TODO: migrate this to common lib and use it in add_private_ppa.py
 def create_apt_auth_file(device, ppa_data: PPAData) -> None:
     host, path = ppa_url_parts(ppa_data.url)
     auth_file = f"/etc/apt/auth.conf.d/ppa-{slugify(path)}.conf"
@@ -218,8 +219,9 @@ def parse_args():
 
 
 def ensure_environment():
-    if not os.getenv("PACKAGE_DATA_MAP"):
-        raise SystemExit("Script requires 'PACKAGE_DATA_MAP' to be defined")
+    for envvar in ["PACKAGE_DATA_MAP", "CONCRETE_KERNEL"]:
+        if not os.getenv(envvar):
+            raise SystemExit(f"Script requires '{envvar}' to be defined")
 
 
 def main():

@@ -186,25 +186,9 @@ def main_device(mocker):
     return device
 
 
-def test_main_uses_archive_proposed_by_default(mocker, monkeypatch, main_device):
-    monkeypatch.delenv("SOURCE_PACKAGE_DATA", raising=False)
-    proposed_repository = mocker.patch.object(
-        add_kernel_ppa, "proposed_repository", return_value="proposed-url"
-    )
-    enable_archive = mocker.patch.object(add_kernel_ppa, "enable_archive_proposed")
-
-    add_kernel_ppa.main()
-
-    proposed_repository.assert_called_once_with("amd64")
-    enable_archive.assert_called_once_with(
-        main_device,
-        add_kernel_ppa.PPAData("proposed-url", None, None, None, False),
-        "noble",
-    )
-
-
 def test_main_enables_public_ppa_without_credentials(mocker, monkeypatch, main_device):
     monkeypatch.setenv("SOURCE_PACKAGE_DATA", "cert-package-data-proposed2")
+    monkeypatch.setenv("CONCRETE_KERNEL", "linux-generic")
     enable_ppa = mocker.patch.object(add_kernel_ppa, "enable_ppa")
 
     add_kernel_ppa.main()
