@@ -27,10 +27,7 @@ def parse_args():
 
 def snap_json_map_type():
     # snap json result is
-    # {
-    #   'snap_name' : {
-    #     'snap_track' : {
-    #       'snap_risk': {
+    # { 'snap_name': { 'snap_track': { 'snap_risk': {
     #         'arch': {
     #           'version': ... (str)
     #           'revision:': ... (int)
@@ -53,8 +50,7 @@ def main():
         store_reponse = requests.get(url, headers=headers)
         store_meta_json = store_reponse.json()
         if "channel-map" not in store_meta_json:
-            print("WARNING: BAD ITEM: ", file=sys.stderr)
-            print(store_meta_json, file=sys.stderr)
+            print(f"WARNING: BAD ITEM:\n{store_meta_json}", file=sys.stderr)
             continue
         for meta in store_meta_json["channel-map"]:
             track = meta["channel"]["track"]
@@ -63,10 +59,8 @@ def main():
 
             version = meta["version"]
             revision = meta["revision"]
-            try:
-                grade = yaml.safe_load(meta["snap-yaml"]).get("grade")
-            except KeyError:
-                grade = "unknown"
+            grade = yaml.safe_load(meta.get("snap-yaml", "grade: unknown")).get("grade")
+
             # Special case: We only want to test mir-kiosk for grade: stable
             if name == "mir-kiosk" and grade == "devel":
                 continue
