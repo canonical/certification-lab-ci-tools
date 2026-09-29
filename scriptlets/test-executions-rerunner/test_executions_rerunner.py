@@ -123,7 +123,6 @@ class PostArguments(NamedTuple):
     """
 
     url: str
-    json: dict | None = None
     data: dict | None = None
 
 
