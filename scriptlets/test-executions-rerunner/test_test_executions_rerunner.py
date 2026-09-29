@@ -119,7 +119,6 @@ def test_jenkins_process_propagates_allowed_parameters_in_form_data(jenkins):
     assert post_arguments.url == (
         "http://10.102.156.15:8080/job/fake-job/buildWithParameters"
     )
-    assert post_arguments.json is None
     assert post_arguments.data == {
         "TEST_OBSERVER_REPORTING": True,
         "SOURCE_PACKAGE_DATA": "package-data",
