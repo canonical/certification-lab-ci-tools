@@ -1,4 +1,5 @@
 import base64
+from urllib.parse import parse_qs
 
 import pytest
 import requests_mock
@@ -90,6 +91,38 @@ def test_jenkins_invalid_family(jenkins):
     }
     with pytest.raises(RequestProccesingError):
         jenkins.process(rerun_request)
+
+
+def test_jenkins_extracts_only_allowed_parameters():
+    ci_link = (
+        "http://10.102.156.15:8080/job/fake-job/123"
+        "?SOURCE_PACKAGE_DATA=package-data&UNRELATED_PARAMETER=value"
+    )
+
+    assert JenkinsProcessor.extract_allowed_params_ci_link(ci_link) == {
+        "SOURCE_PACKAGE_DATA": "package-data"
+    }
+
+
+def test_jenkins_process_propagates_allowed_parameters_in_form_data(jenkins):
+    rerun_request = {
+        "test_execution_id": 1,
+        "ci_link": (
+            "http://10.102.156.15:8080/job/fake-job/123"
+            "?SOURCE_PACKAGE_DATA=package-data&UNRELATED_PARAMETER=value"
+        ),
+        "family": "snap",
+    }
+
+    post_arguments = jenkins.process(rerun_request)
+
+    assert post_arguments.url == (
+        "http://10.102.156.15:8080/job/fake-job/buildWithParameters"
+    )
+    assert post_arguments.data == {
+        "TEST_OBSERVER_REPORTING": True,
+        "SOURCE_PACKAGE_DATA": "package-data",
+    }
 
 
 def test_github_no_ci_link(github):
@@ -184,11 +217,11 @@ expected_processed_per_processor = {
     JenkinsProcessor.__name__: {
         1: {
             "url": "http://10.102.156.15:8080/job/snap-job/buildWithParameters",
-            "json": {"TEST_OBSERVER_REPORTING": True},
+            "data": {"TEST_OBSERVER_REPORTING": True},
         },
         2: {
             "url": "http://10.102.156.15:8080/job/deb-job/buildWithParameters",
-            "json": {"TEST_OBSERVER_REPORTING": True, "TESTPLAN": "full"},
+            "data": {"TEST_OBSERVER_REPORTING": True, "TESTPLAN": "full"},
         },
     },
     GithubProcessor.__name__: {
@@ -235,18 +268,24 @@ def test_end_to_end(request, rerunner_name, expected_successful):
     processor_name = type(rerunner.processor).__name__
     expected_processed = expected_processed_per_processor[processor_name]
 
-    def create_json_matcher(post_arguments):
-        if "json" in post_arguments:
-            local_json = post_arguments["json"]
+    def create_post_data_matcher(post_arguments):
+        expected_json = post_arguments.get("json")
+        expected_form = post_arguments.get("data")
+        if expected_form is not None:
+            expected_form = {
+                key: str(value) for key, value in post_arguments["data"].items()
+            }
 
-            def json_matcher(request):
-                return request.json() == local_json
-        else:
+        def post_data_matcher(request):
+            if expected_json is not None:
+                return request.json() == expected_json
+            if expected_form is not None:
+                return parse_qs(request.text) == {
+                    key: [value] for key, value in expected_form.items()
+                }
+            return True
 
-            def json_matcher(_):
-                return True
-
-        return json_matcher
+        return post_data_matcher
 
     def request_headers_filter(processor_name):
         return headers[processor_name]
@@ -269,7 +308,7 @@ def test_end_to_end(request, rerunner_name, expected_successful):
             mocker.post(
                 post_arguments["url"],
                 request_headers=request_headers_filter(processor_name),
-                additional_matcher=create_json_matcher(post_arguments),
+                additional_matcher=create_post_data_matcher(post_arguments),
                 # only some of the reruns are designated to succeed,
                 # so that we can check that only these are deleted
                 status_code=200 if execution_id in expected_successful else 500,

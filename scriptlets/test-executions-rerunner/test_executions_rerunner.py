@@ -15,7 +15,7 @@ from argparse import ArgumentParser
 from functools import partial
 from os import environ
 from typing import NamedTuple
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 from requests import Session
 from requests.adapters import HTTPAdapter
@@ -123,7 +123,7 @@ class PostArguments(NamedTuple):
     """
 
     url: str
-    json: dict | None = None
+    data: dict | None = None
 
 
 class RequestProcessor(ABC):
@@ -194,6 +194,7 @@ class JenkinsProcessor(RequestProcessor):
             )
         # extract the rerun URL from the ci_link
         url = self.extract_rerun_url_from_ci_link(ci_link)
+        package_data = self.extract_allowed_params_ci_link(ci_link)
         # determine additional payload arguments
         # based on the artifact family in the rerun request
         try:
@@ -214,7 +215,17 @@ class JenkinsProcessor(RequestProcessor):
                 f"{type(self).__name__} cannot process family '{family}' "
                 f"in rerun request {rerun_request}"
             )
-        return PostArguments(url=url, json=json)
+        json.update(package_data)
+        return PostArguments(url=url, data=json)
+
+    @classmethod
+    def extract_allowed_params_ci_link(cls, ci_link: str) -> dict:
+        url_components = urlparse(ci_link)
+        params = parse_qs(url_components.query)
+        # parse_qs returns list for params
+        if "SOURCE_PACKAGE_DATA" in params:
+            return {"SOURCE_PACKAGE_DATA": params["SOURCE_PACKAGE_DATA"][0]}
+        return {}
 
     @classmethod
     def extract_rerun_url_from_ci_link(cls, ci_link: str) -> str:
@@ -226,15 +237,19 @@ class JenkinsProcessor(RequestProcessor):
         """
         url_components = urlparse(ci_link)
         path = url_components.path.strip("/")
+        # FIXME: are we sure we need a regex here?
         match = re.match(cls.path_template, path)
+
         if url_components.netloc != cls.netloc or not match:
             raise RequestProccesingError(
                 f"{cls.__name__} cannot process ci_link {ci_link}"
             )
-        return (
+        url = (
             f"{url_components.scheme}://{url_components.netloc}/"
             f"job/{match.group('job_name')}/buildWithParameters"
         )
+
+        return url
 
 
 class GithubProcessor(RequestProcessor):
