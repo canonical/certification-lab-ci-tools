@@ -12,6 +12,9 @@ from pathlib import Path
 import requests
 import yaml
 
+# For these snaps ignore all non "stable" grade releases
+SNAP_ONLY_STABLE_RELEASES = {"mir-kiosk"}
+
 
 def parse_args():
     parser = ArgumentParser()
@@ -47,8 +50,8 @@ def main():
     for name, store in snap_yaml:
         url = f"https://api.snapcraft.io/v2/snaps/info/{name}?fields=version,revision,snap-yaml"
         headers = {"Snap-Device-Series": "16", "Snap-Device-Store": store}
-        store_reponse = requests.get(url, headers=headers)
-        store_meta_json = store_reponse.json()
+        store_response = requests.get(url, headers=headers)
+        store_meta_json = store_response.json()
         if "channel-map" not in store_meta_json:
             print(f"WARNING: BAD ITEM:\n{store_meta_json}", file=sys.stderr)
             continue
@@ -62,7 +65,7 @@ def main():
             grade = yaml.safe_load(meta.get("snap-yaml", "grade: unknown")).get("grade")
 
             # Special case: We only want to test mir-kiosk for grade: stable
-            if name == "mir-kiosk" and grade == "devel":
+            if name in SNAP_ONLY_STABLE_RELEASES and grade != "stable":
                 continue
             snap_json_map[name][track][risk][arch] = {
                 "version": version,
