@@ -6,6 +6,7 @@ from urllib.error import URLError
 
 import pytest
 from invoke import Result
+
 from toolbox.cli import refresh_google_signing_key as cli
 
 KEY = b"-----BEGIN PGP PUBLIC KEY BLOCK-----\nexample\n-----END PGP PUBLIC KEY BLOCK-----\n"
