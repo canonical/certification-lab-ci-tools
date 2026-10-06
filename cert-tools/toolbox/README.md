@@ -227,6 +227,7 @@ install-checkbox-debs = "toolbox.cli.install_checkbox_debs:main"
 ensure-stable-snaps = "toolbox.cli.ensure_stable_snaps:main"
 ensure-kernel = "toolbox.cli.ensure_kernel:main"
 add-kernel-ppa = "toolbox.cli.add_kernel_ppa:main"
+refresh-google-signing-key = "toolbox.cli.refresh_google_signing_key:main"
 setup_apt_cache_proxy = "toolbox.cli.setup_apt_cache_proxy:main"
 ```
 
@@ -264,6 +265,23 @@ export KERNEL_PPA_USERNAME1="..."
 export KERNEL_PPA_USERNAME2="..."
 # In this situation, the esm 2 PPA will be enabled and KERNEL_PPA_USERNAME2
 # will be used
+```
+
+### `refresh-google-signing-key`
+
+Downloads Google's current Linux signing keys over HTTPS on the agent and
+installs them on the DUT at `/etc/apt/trusted.gpg.d/google.asc`. The key is
+refreshed on every invocation, regardless of whether Chrome is installed.
+The file is replaced atomically with permissions `0644`; download or remote
+installation failures exit nonzero. No APT update is performed by this tool.
+
+Use it before APT updates that could fail because the Google repository's
+signing key is missing or outdated. Sources with an explicit `signed-by`
+keyring still require that referenced keyring to be refreshed separately.
+
+```bash
+# DEVICE_IP (and optionally DEVICE_USER / DEVICE_PWD) must be set
+refresh-google-signing-key || exit 1
 ```
 
 ### `setup_apt_cache_proxy`
