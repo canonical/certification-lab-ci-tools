@@ -46,7 +46,7 @@ required-packages:
   - channel: edge
     source: checkbox-ng
     package: checkbox-ng
-    versions: [ "18.04", "20.04", "22.04", "24.04" ]
+    versions: [ "18.04", "20.04", "22.04", "24.04", "26.04" ]
     architectures: [ amd64, arm64 ]
 ```
 

@@ -1,4 +1,7 @@
 required-snaps:
+  - name: checkbox26
+    channels: [ latest/edge ]
+    architectures: [ amd64, arm64 ]
   - name: checkbox24
     channels: [ latest/edge ]
     architectures: [ amd64, arm64, armhf ]
@@ -22,18 +25,21 @@ required-snaps:
       - "20.04/edge"
       - "18.04/edge"
     architectures: [ amd64, arm64, armhf ]
+  - name: checkbox
+    channels: [ "26.04/edge" ]
+    architectures: [ amd64, arm64 ]
 
 required-packages:
   - channel: edge
     source: checkbox-ng
     package: checkbox-ng
-    versions: [ "18.04", "20.04", "22.04", "24.04" ]
+    versions: [ "18.04", "20.04", "22.04", "24.04", "26.04" ]
     architectures: [ all ]
 
   - channel: edge
     source: checkbox-provider-base
     package: checkbox-provider-base
-    versions: [ "20.04", "22.04", "24.04" ]
+    versions: [ "20.04", "22.04", "24.04", "26.04" ]
     architectures: [ amd64, arm64, armhf, ppc64el, riscv64, s390x ]
 
     # Launchpad doesn't build riscv64 packages for releases 18.04 and older,
@@ -47,25 +53,25 @@ required-packages:
   - channel: edge
     source: checkbox-provider-certification-client
     package: checkbox-provider-certification-client
-    versions: [ "18.04", "20.04", "22.04", "24.04" ]
+    versions: [ "18.04", "20.04", "22.04", "24.04", "26.04" ]
     architectures: [ all ]
 
   - channel: edge
     source: checkbox-provider-certification-server
     package: checkbox-provider-certification-server
-    versions: [ "18.04", "20.04", "22.04", "24.04" ]
+    versions: [ "18.04", "20.04", "22.04", "24.04", "26.04" ]
     architectures: [ all ]
 
   - channel: edge
     source: checkbox-provider-gpgpu
     package: checkbox-provider-gpgpu
-    versions: [ "18.04", "20.04", "22.04", "24.04" ]
+    versions: [ "18.04", "20.04", "22.04", "24.04", "26.04" ]
     architectures: [ amd64 ]
 
   - channel: edge
     source: checkbox-provider-resource
     package: checkbox-provider-resource
-    versions: [ "20.04", "22.04", "24.04" ]
+    versions: [ "20.04", "22.04", "24.04", "26.04" ]
     architectures: [ amd64, arm64, armhf, ppc64el, riscv64, s390x ]
 
     # Launchpad doesn't build riscv64 packages for releases 18.04 and older,
@@ -79,7 +85,7 @@ required-packages:
   - channel: edge
     source: checkbox-provider-sru
     package: checkbox-provider-sru
-    versions: [ "20.04", "22.04", "24.04" ]
+    versions: [ "20.04", "22.04", "24.04", "26.04" ]
     architectures: [ amd64, arm64, armhf, ppc64el, riscv64, s390x ]
 
     # Launchpad doesn't build riscv64 packages for releases 18.04 and older,
@@ -93,11 +99,11 @@ required-packages:
   - channel: edge
     source: checkbox-provider-tpm2
     package: checkbox-provider-tpm2
-    versions: [ "18.04", "20.04", "22.04", "24.04" ]
+    versions: [ "18.04", "20.04", "22.04", "24.04", "26.04" ]
     architectures: [ all ]
 
   - channel: edge
     source: checkbox-support
     package: python3-checkbox-support
-    versions: [ "18.04", "20.04", "22.04", "24.04" ]
+    versions: [ "18.04", "20.04", "22.04", "24.04", "26.04" ]
     architectures: [ all ]
