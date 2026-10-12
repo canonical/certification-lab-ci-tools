@@ -20,7 +20,6 @@ Usage::
 
     DEVICE_IP=<dut-ip> setup_apt_cache_proxy
     APT_CACHE_HOST=<host> DEVICE_IP=<dut-ip> setup_apt_cache_proxy
-    DEVICE_IP=<dut-ip> setup_apt_cache_proxy disable
 """
 
 import io
