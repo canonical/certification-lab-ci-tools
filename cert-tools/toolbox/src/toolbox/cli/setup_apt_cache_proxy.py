@@ -5,6 +5,9 @@ traffic is routed through the ``cert-apt-cache`` proxy while HTTPS traffic goes
 DIRECT. Ubuntu Core devices are skipped (they have no apt). All error paths exit
 0 with a descriptive SKIP/ERROR message so that SRU tests are not aborted.
 
+Passing the ``disable`` action removes ``/etc/apt/apt.conf.d/02proxy`` from
+the remote device so that APT no longer uses the proxy.
+
 The IP of the device is provided by the environment variable ``DEVICE_IP``,
 which must be set. The user name on the remote device defaults to ``ubuntu``
 unless provided by the environment variable ``DEVICE_USER``. Password-based
@@ -17,11 +20,13 @@ Usage::
 
     DEVICE_IP=<dut-ip> setup_apt_cache_proxy
     APT_CACHE_HOST=<host> DEVICE_IP=<dut-ip> setup_apt_cache_proxy
+    DEVICE_IP=<dut-ip> setup_apt_cache_proxy disable
 """
 
 import io
 import os
 import sys
+from argparse import ArgumentParser
 
 from toolbox.devices.lab import LabDevice
 
@@ -47,7 +52,34 @@ def is_ubuntu_core(os_id: str) -> bool:
     return os_id.strip() == "ubuntu-core"
 
 
+def disable_proxy(device: LabDevice) -> None:
+    """Remove the apt proxy configuration file from ``device`` (if present)."""
+    print(f"Removing apt-cache proxy configuration from {device.host}...")
+
+    result = device.run(f"sudo rm -f {APT_PROXY_CONF_PATH}")
+    if result.failed:
+        print(
+            f"ERROR: Failed to remove proxy config {APT_PROXY_CONF_PATH} "
+            f"on {device.host} — skipping"
+        )
+        sys.exit(0)
+
+    print("Done.")
+
+
 def main():
+    parser = ArgumentParser(
+        description="Enable or disable the lab apt-cache proxy on the DUT"
+    )
+    parser.add_argument(
+        "action",
+        nargs="?",
+        choices=["enable", "disable"],
+        default="enable",
+        help="enable (default) writes the proxy config, disable removes it",
+    )
+    args = parser.parse_args()
+
     cache_host = os.environ.get("APT_CACHE_HOST", DEFAULT_APT_CACHE_HOST)
 
     try:
@@ -69,6 +101,10 @@ def main():
     if is_ubuntu_core(os_id):
         print(f"SKIP: Ubuntu Core detected on {device.host}, no apt proxy needed")
         sys.exit(0)
+
+    if args.action == "disable":
+        disable_proxy(device)
+        return
 
     print(f"Setting up apt-cache proxy ({cache_host}:{PROXY_PORT}) on {device.host}...")
 

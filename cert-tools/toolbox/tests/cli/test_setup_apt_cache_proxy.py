@@ -156,6 +156,75 @@ def test_main_write_failure_skips(mocker, capsys):
     assert "ERROR: Failed to write proxy config" in out
 
 
+@pytest.fixture(autouse=True)
+def default_argv(monkeypatch):
+    monkeypatch.setattr("sys.argv", ["setup_apt_cache_proxy"])
+
+
+def test_main_explicit_enable(mocker, capsys, monkeypatch):
+    monkeypatch.setattr("sys.argv", ["setup_apt_cache_proxy", "enable"])
+    os_result = Result(stdout="ubuntu\n", exited=0)
+    write_result = Result(stdout="", exited=0)
+    device = _patch_device(mocker, os_result, write_result)
+
+    main()
+
+    assert "tee" in device.run.call_args_list[1].args[0]
+    assert "Setting up apt-cache proxy" in capsys.readouterr().out
+
+
+def test_main_disable_success(mocker, capsys, monkeypatch):
+    monkeypatch.setattr("sys.argv", ["setup_apt_cache_proxy", "disable"])
+    os_result = Result(stdout="ubuntu\n", exited=0)
+    remove_result = Result(stdout="", exited=0)
+    device = _patch_device(mocker, os_result, remove_result)
+
+    main()
+
+    assert device.run.call_args_list[1].args[0] == (
+        "sudo rm -f /etc/apt/apt.conf.d/02proxy"
+    )
+    out = capsys.readouterr().out
+    assert "Removing apt-cache proxy configuration" in out
+    assert "Done." in out
+
+
+def test_main_disable_failure_skips(mocker, capsys, monkeypatch):
+    monkeypatch.setattr("sys.argv", ["setup_apt_cache_proxy", "disable"])
+    os_result = Result(stdout="ubuntu\n", exited=0)
+    remove_result = Result(stdout="", exited=1, stderr="Permission denied\n")
+    _patch_device(mocker, os_result, remove_result)
+
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+
+    assert exc_info.value.code == 0
+    assert "ERROR: Failed to remove proxy config" in capsys.readouterr().out
+
+
+def test_main_disable_ubuntu_core_skips(mocker, capsys, monkeypatch):
+    monkeypatch.setattr("sys.argv", ["setup_apt_cache_proxy", "disable"])
+    os_result = Result(stdout="ubuntu-core\n", exited=0)
+    device = _patch_device(mocker, os_result)
+
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+
+    assert exc_info.value.code == 0
+    assert device.run.call_count == 1
+    assert "SKIP: Ubuntu Core detected" in capsys.readouterr().out
+
+
+def test_main_invalid_action_exits_nonzero(mocker, monkeypatch):
+    monkeypatch.setattr("sys.argv", ["setup_apt_cache_proxy", "bogus"])
+    mocker.patch.object(setup_apt_cache_proxy, "LabDevice")
+
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+
+    assert exc_info.value.code == 2
+
+
 # ---------------------------------------------------------------------------
 # main — no DEVICE_IP
 # ---------------------------------------------------------------------------
