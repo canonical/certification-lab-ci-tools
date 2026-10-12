@@ -51,6 +51,26 @@ def is_ubuntu_core(os_id: str) -> bool:
     return os_id.strip() == "ubuntu-core"
 
 
+def enable_proxy(device: LabDevice, cache_host: str) -> None:
+    """Write the apt proxy configuration file on ``device``."""
+    print(f"Setting up apt-cache proxy ({cache_host}:{PROXY_PORT}) on {device.host}...")
+
+    # Write proxy config atomically in a single run
+    config = generate_proxy_config(cache_host)
+    result = device.run(
+        f"sudo tee {APT_PROXY_CONF_PATH} >/dev/null",
+        in_stream=io.StringIO(config),
+    )
+    if result.failed:
+        print(
+            f"ERROR: Failed to write proxy config to {APT_PROXY_CONF_PATH} "
+            f"on {device.host} — skipping"
+        )
+        sys.exit(0)
+
+    print("Done.")
+
+
 def disable_proxy(device: LabDevice) -> None:
     """Remove the apt proxy configuration file from ``device`` (if present)."""
     print(f"Removing apt-cache proxy configuration from {device.host}...")
@@ -103,24 +123,8 @@ def main():
 
     if args.action == "disable":
         disable_proxy(device)
-        return
-
-    print(f"Setting up apt-cache proxy ({cache_host}:{PROXY_PORT}) on {device.host}...")
-
-    # Write proxy config atomically in a single run
-    config = generate_proxy_config(cache_host)
-    result = device.run(
-        f"sudo tee {APT_PROXY_CONF_PATH} >/dev/null",
-        in_stream=io.StringIO(config),
-    )
-    if result.failed:
-        print(
-            f"ERROR: Failed to write proxy config to {APT_PROXY_CONF_PATH} "
-            f"on {device.host} — skipping"
-        )
-        sys.exit(0)
-
-    print("Done.")
+    else:
+        enable_proxy(device, cache_host)
 
 
 if __name__ == "__main__":
