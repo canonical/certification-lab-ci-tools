@@ -294,12 +294,19 @@ tests are not aborted. The `DEVICE_IP` (and optionally `DEVICE_USER` /
 `DEVICE_PWD`) environment variables configure the SSH connection. The
 `APT_CACHE_HOST` environment variable can override the default cache host.
 
+An optional `action` argument selects what to do: `enable` (the default)
+writes `/etc/apt/apt.conf.d/02proxy`, while `disable` removes it so the DUT
+no longer uses the proxy.
+
 ```bash
 # DEVICE_IP (and optionally DEVICE_USER / DEVICE_PWD) must be set
 DEVICE_IP=<dut-ip> setup_apt_cache_proxy
 
 # Custom cache host
 APT_CACHE_HOST=<host> DEVICE_IP=<dut-ip> setup_apt_cache_proxy
+
+# Remove the proxy configuration from the DUT
+DEVICE_IP=<dut-ip> setup_apt_cache_proxy disable
 ```
 
 ## Testing locally with `multipass`
