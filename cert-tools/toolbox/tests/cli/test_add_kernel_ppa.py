@@ -231,9 +231,7 @@ def test_main_updates_and_installs_kernel_from_private_ppa(
     )
     enable_ppa.assert_called_once_with(main_device, ppa_data, "noble")
     debs.update.assert_called_once_with()
-    debs.install.assert_called_once_with(
-        ["linux-image-test"], options=["-o", "DPkg::Lock::Timeout=300"]
-    )
+    debs.install.assert_called_once_with(["linux-image-test"])
 
 
 @pytest.mark.parametrize("exited", [0, 100])
@@ -264,9 +262,9 @@ def test_main_passes_lock_timeout_to_apt_get(mocker, monkeypatch, main_device, e
             "apt-get",
             "-qqy",
             *add_kernel_ppa.DebInterface.options,
-            "-o",
-            "DPkg::Lock::Timeout=300",
             "install",
             "linux-generic-hwe-22.04",
         ]
     )
+    command = main_device.run.call_args[0][0]
+    assert command.count("DPkg::Lock::Timeout=300") == 1

@@ -1,5 +1,6 @@
 """Tests for the toolbox.interfaces.debs module."""
 
+import pytest
 from invoke import Result
 
 from tests.devices.trivial import TrivialDevice
@@ -30,6 +31,8 @@ class TestDebAction:
             "Dpkg::Options::=--force-confdef",
             "-o",
             "Dpkg::Options::=--force-confold",
+            "-o",
+            "DPkg::Lock::Timeout=300",
             "update",
         ]
         device.run.assert_called_once_with(expected_command)
@@ -121,6 +124,34 @@ class TestDebAction:
 
 class TestDebPackageOperations:
     """Tests for DebInterface package management methods."""
+
+    @pytest.mark.parametrize(
+        "method, args, action",
+        [
+            ("update", [], "update"),
+            ("upgrade", [], "dist-upgrade"),
+            ("install", [["package1"]], "install"),
+        ],
+    )
+    @pytest.mark.parametrize("exited", [0, 100])
+    def test_operations_include_lock_timeout(
+        self, mocker, method, args, action, exited
+    ):
+        device = TrivialDevice(interfaces=[DebInterface()])
+        stderr = "E: Unable to acquire the dpkg frontend lock" if exited else ""
+        device.run = mocker.Mock(return_value=Result(exited=exited, stderr=stderr))
+
+        result = getattr(device.interfaces[DebInterface], method)(*args)
+
+        command = device.run.call_args[0][0]
+        action_index = command.index(action)
+        timeout_index = command.index("DPkg::Lock::Timeout=300")
+        assert command[timeout_index - 1] == "-o"
+        assert timeout_index < action_index
+        assert command.count("DPkg::Lock::Timeout=300") == 1
+        assert bool(result) == (exited == 0)
+        assert result.message == stderr
+        assert device.run.call_count == 1
 
     def test_update(self, mocker):
         """Test update calls action with 'update'."""

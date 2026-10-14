@@ -21,6 +21,9 @@ class DebInterface(DeviceInterface):
         "Dpkg::Options::=--force-confdef",
         "-o",
         "Dpkg::Options::=--force-confold",
+        # Wait for dpkg locks; this does not cover apt lists or archives locks.
+        "-o",
+        "DPkg::Lock::Timeout=300",
     ]
 
     # to be monitored, suggesting package management operations are ongoing
