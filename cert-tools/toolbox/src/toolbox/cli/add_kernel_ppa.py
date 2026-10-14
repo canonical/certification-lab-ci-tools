@@ -246,7 +246,9 @@ def main():
         enable_archive_proposed(device, ppa_data, args.series)
     if not debs.update():
         raise SystemExit("ERROR: apt-get update failed")
-    if not debs.install([os.environ["CONCRETE_KERNEL"]]):
+    if not debs.install(
+        [os.environ["CONCRETE_KERNEL"]], options=["-o", "DPkg::Lock::Timeout=300"]
+    ):
         raise SystemExit("ERROR: kernel installation failed")
 
 

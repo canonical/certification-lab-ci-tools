@@ -3,6 +3,7 @@
 import json
 
 import pytest
+from invoke import Result
 
 from toolbox.cli import add_kernel_ppa
 
@@ -230,4 +231,42 @@ def test_main_updates_and_installs_kernel_from_private_ppa(
     )
     enable_ppa.assert_called_once_with(main_device, ppa_data, "noble")
     debs.update.assert_called_once_with()
-    debs.install.assert_called_once_with(["linux-image-test"])
+    debs.install.assert_called_once_with(
+        ["linux-image-test"], options=["-o", "DPkg::Lock::Timeout=300"]
+    )
+
+
+@pytest.mark.parametrize("exited", [0, 100])
+def test_main_passes_lock_timeout_to_apt_get(mocker, monkeypatch, main_device, exited):
+    monkeypatch.setenv("SOURCE_PACKAGE_DATA", "cert-package-data")
+    monkeypatch.setenv("CONCRETE_KERNEL", "linux-generic-hwe-22.04")
+    mocker.patch.object(add_kernel_ppa, "enable_archive_proposed")
+    debs = main_device.interfaces[add_kernel_ppa.DebInterface]
+    debs.update.return_value = True
+    interface = add_kernel_ppa.DebInterface()
+    interface.attach_to(main_device)
+    debs.install = interface.install
+    main_device.run.return_value = Result(
+        exited=exited,
+        stderr="E: Unable to acquire the dpkg frontend lock" if exited else "",
+    )
+
+    if exited:
+        with pytest.raises(SystemExit, match="ERROR: kernel installation failed"):
+            add_kernel_ppa.main()
+    else:
+        add_kernel_ppa.main()
+
+    main_device.run.assert_called_once_with(
+        [
+            "sudo",
+            "DEBIAN_FRONTEND=noninteractive",
+            "apt-get",
+            "-qqy",
+            *add_kernel_ppa.DebInterface.options,
+            "-o",
+            "DPkg::Lock::Timeout=300",
+            "install",
+            "linux-generic-hwe-22.04",
+        ]
+    )
