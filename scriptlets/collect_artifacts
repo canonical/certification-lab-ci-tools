@@ -22,9 +22,9 @@ fi
 log "Collecting artifacts$INCLUDED_MESSAGE"
 
 rm -rf artifacts && mkdir artifacts
-find ~ -name 'submission_*.junit.xml' -exec mv {} artifacts/junit.xml \;
-find ~ -name 'submission_*.html' -exec mv {} artifacts/submission.html \;
-find ~ -name 'submission_*.tar.xz' -exec mv {} artifacts/submission.tar.xz \;
-find ~ -name 'submission_*.log' -exec mv {} artifacts/submission.log \;
+find ~ -ignore_readdir_race -name 'submission_*.junit.xml' -exec mv {} artifacts/junit.xml \;
+find ~ -ignore_readdir_race -name 'submission_*.html' -exec mv {} artifacts/submission.html \;
+find ~ -ignore_readdir_race -name 'submission_*.tar.xz' -exec mv {} artifacts/submission.tar.xz \;
+find ~ -ignore_readdir_race -name 'submission_*.log' -exec mv {} artifacts/submission.log \;
 
 [ -n "$INCLUDED" ] && cp $INCLUDED artifacts
