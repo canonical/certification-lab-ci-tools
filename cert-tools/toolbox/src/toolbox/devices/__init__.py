@@ -91,7 +91,10 @@ class RemoteHost(Device):
         # Password is passed via connect_kwargs, see:
         # https://docs.fabfile.org/en/latest/api/connection.html#connect-kwargs-arg
         # https://docs.paramiko.org/en/latest/api/client.html
-        connect_kwargs = {"password": self.password} if self.password else None
+        # Bound session-channel creation when reconnecting during a DUT reboot.
+        connect_kwargs: dict[str, int | str] = {"channel_timeout": 10}
+        if self.password:
+            connect_kwargs["password"] = self.password
         return Connection(
             self.host, user=self.user, config=self.config, connect_kwargs=connect_kwargs
         )

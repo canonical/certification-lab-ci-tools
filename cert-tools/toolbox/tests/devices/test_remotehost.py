@@ -1,8 +1,10 @@
 """Tests for RemoteHost device."""
 
+import pytest
 from fabric import Connection
 from invoke import Result
 from invoke.exceptions import Failure
+from paramiko.ssh_exception import SSHException
 
 from toolbox.devices import RemoteHost
 
@@ -27,6 +29,15 @@ class TestRemoteHostInitialization:
 class TestRemoteHostConnection:
     """Tests for RemoteHost.create_connection() method."""
 
+    @pytest.mark.parametrize("password", [None, "fixture-password"])
+    def test_create_connection_sets_channel_timeout(self, password):
+        """Bound channel creation without losing password authentication."""
+        connection = RemoteHost(
+            "example.com", user="ubuntu", password=password
+        ).create_connection()
+        assert connection.connect_kwargs["channel_timeout"] == 10
+        assert connection.connect_kwargs.get("password") == password
+
     def test_create_connection_returns_connection(self, mocker):
         """Test that create_connection returns a Connection object."""
         mock_connection = mocker.Mock(spec=Connection)
@@ -40,6 +51,23 @@ class TestRemoteHostConnection:
 
 class TestRemoteHostRun:
     """Tests for RemoteHost.run() method."""
+
+    def test_channel_timeout_returns_error_result(self, mocker):
+        """A channel-open timeout returns a failed result for status retries."""
+        connection = mocker.MagicMock(spec=Connection)
+        connection.__enter__.return_value = connection
+        connection.__exit__.return_value = False
+        connection.run.side_effect = SSHException("Timeout opening channel.")
+        mocker.patch.object(RemoteHost, "create_connection", return_value=connection)
+
+        result = RemoteHost("example.com").run(
+            ["systemctl", "is-system-running"], hide=True
+        )
+
+        assert result.exited == 255
+        assert not result
+        assert "Timeout opening channel" in result.stderr
+        connection.__exit__.assert_called_once()
 
     def test_run_successful_command(self, mocker):
         """Test running a successful command on a remote host."""
