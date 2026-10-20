@@ -5,6 +5,8 @@ from invoke import Result
 
 from toolbox.cli import setup_apt_cache_proxy
 from toolbox.cli.setup_apt_cache_proxy import (
+    DEFAULT_DIRECT_HOSTS,
+    direct_hosts_from_env,
     generate_proxy_config,
     is_ubuntu_core,
     main,
@@ -27,9 +29,42 @@ def test_generate_proxy_config_custom_host():
     assert 'Acquire::https::Proxy "DIRECT";' in config
 
 
-def test_generate_proxy_config_produces_two_lines():
+def test_generate_proxy_config_pins_the_repositories_the_cache_cannot_serve():
+    """dl.google.com must be fetched by the DUT itself.
+
+    The cache is HTTP-only, so it cannot follow the repository's redirect to
+    HTTPS, and it cannot reach the host at all; APT keys proxy exceptions by
+    host, so this is the only granularity available.
+    """
     config = generate_proxy_config("example.com")
+    assert 'Acquire::http::Proxy::dl.google.com "DIRECT";' in config
+    assert DEFAULT_DIRECT_HOSTS == ("dl.google.com",)
+    assert config.count("\n") == 2 + len(DEFAULT_DIRECT_HOSTS)
+
+
+def test_generate_proxy_config_accepts_an_explicit_exception_list():
+    config = generate_proxy_config("example.com", direct_hosts=["only.example.com"])
+    assert 'Acquire::http::Proxy::only.example.com "DIRECT";' in config
+    assert "dl.google.com" not in config
+    assert config.count("\n") == 3
+
+
+def test_generate_proxy_config_can_omit_exceptions_entirely():
+    config = generate_proxy_config("example.com", direct_hosts=())
     assert config.count("\n") == 2
+    assert "Proxy::" not in config
+
+
+def test_direct_hosts_from_env_defaults_to_the_shipped_list():
+    assert direct_hosts_from_env(None) == DEFAULT_DIRECT_HOSTS
+
+
+def test_direct_hosts_from_env_parses_a_list_and_allows_disabling():
+    assert direct_hosts_from_env("a.example, b.example ") == (
+        "a.example",
+        "b.example",
+    )
+    assert direct_hosts_from_env("") == ()
 
 
 # ---------------------------------------------------------------------------
@@ -87,6 +122,41 @@ def test_main_success(mocker, capsys):
     out = capsys.readouterr().out
     assert "Setting up apt-cache proxy" in out
     assert "Done." in out
+
+
+def test_main_writes_the_direct_exceptions(mocker, capsys, monkeypatch):
+    """The exceptions must reach the file the DUT actually reads."""
+    os_result = Result(stdout="ubuntu\n", exited=0)
+    write_result = Result(stdout="", exited=0)
+    device = _patch_device(mocker, os_result, write_result)
+
+    main()
+
+    written = next(
+        call.kwargs["in_stream"].getvalue()
+        for call in device.run.call_args_list
+        if "in_stream" in call.kwargs
+    )
+    assert 'Acquire::http::Proxy "http://tel-apt-cache.canonical.com:3142";' in written
+    assert 'Acquire::https::Proxy "DIRECT";' in written
+    assert 'Acquire::http::Proxy::dl.google.com "DIRECT";' in written
+
+
+def test_main_honours_an_override_of_the_exception_list(mocker, capsys, monkeypatch):
+    monkeypatch.setenv("APT_CACHE_DIRECT_HOSTS", "only.example.com")
+    os_result = Result(stdout="ubuntu\n", exited=0)
+    write_result = Result(stdout="", exited=0)
+    device = _patch_device(mocker, os_result, write_result)
+
+    main()
+
+    written = next(
+        call.kwargs["in_stream"].getvalue()
+        for call in device.run.call_args_list
+        if "in_stream" in call.kwargs
+    )
+    assert 'Acquire::http::Proxy::only.example.com "DIRECT";' in written
+    assert "dl.google.com" not in written
 
 
 def test_main_uses_custom_cache_host_from_env(mocker, capsys, monkeypatch):

@@ -294,6 +294,22 @@ tests are not aborted. The `DEVICE_IP` (and optionally `DEVICE_USER` /
 `DEVICE_PWD`) environment variables configure the SSH connection. The
 `APT_CACHE_HOST` environment variable can override the default cache host.
 
+One repository is fetched by the DUT itself instead of through the cache:
+
+* `dl.google.com` — its `http://` URL redirects to HTTPS, which the HTTP-only
+  cache cannot follow, and the cache unit cannot reach it at all.
+
+APT keys proxy exceptions by host (there is no per-path setting), so the
+generated file contains `Acquire::http::Proxy::<host> "DIRECT";` for each.
+`APT_CACHE_DIRECT_HOSTS` (comma separated) replaces the list for one run, and an
+empty value disables the exceptions entirely.
+
+Sources written in the legacy `http://HTTPS///host/...` form (NVIDIA's Jetson
+drop-in does this) are left untouched: the vendor owns that file, and rewriting
+it would be undone by the next vendor update. The form asks the proxy to open a
+TLS tunnel, which apt-cacher-ng implements — so what such a repository needs is
+egress from the cache to that host, not a client-side change.
+
 An optional `action` argument selects what to do: `enable` (the default)
 writes `/etc/apt/apt.conf.d/02proxy`, while `disable` removes it so the DUT
 no longer uses the proxy.
@@ -304,6 +320,10 @@ DEVICE_IP=<dut-ip> setup_apt_cache_proxy
 
 # Custom cache host
 APT_CACHE_HOST=<host> DEVICE_IP=<dut-ip> setup_apt_cache_proxy
+
+# Different (or no) hosts that must bypass the cache
+APT_CACHE_DIRECT_HOSTS=<host>[,<host>...] DEVICE_IP=<dut-ip> setup_apt_cache_proxy
+APT_CACHE_DIRECT_HOSTS= DEVICE_IP=<dut-ip> setup_apt_cache_proxy
 
 # Remove the proxy configuration from the DUT
 DEVICE_IP=<dut-ip> setup_apt_cache_proxy disable
