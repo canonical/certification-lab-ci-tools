@@ -16,10 +16,20 @@ authentication is used when ``DEVICE_PWD`` is set.
 The cache host defaults to ``tel-apt-cache.canonical.com`` and can be overridden
 via the ``APT_CACHE_HOST`` environment variable.
 
+Some repositories cannot be served by the cache and must be fetched by the DUT
+itself: the cache speaks HTTP only (so a repository that publishes an ``http://``
+URL and redirects to HTTPS can never be completed for the client), and the cache
+unit's egress does not reach every host. Those are pinned to ``DIRECT`` with
+``Acquire::http::Proxy::<host>`` — the finest granularity APT offers, since it
+keys proxies by host and not by path. :data:`DEFAULT_DIRECT_HOSTS` lists the two
+the lab hit; ``APT_CACHE_DIRECT_HOSTS`` (comma separated, empty to disable)
+replaces the list per run.
+
 Usage::
 
     DEVICE_IP=<dut-ip> setup_apt_cache_proxy
     APT_CACHE_HOST=<host> DEVICE_IP=<dut-ip> setup_apt_cache_proxy
+    APT_CACHE_DIRECT_HOSTS=<host>[,<host>...] DEVICE_IP=<dut-ip> setup_apt_cache_proxy
 """
 
 import io
@@ -33,17 +43,37 @@ DEFAULT_APT_CACHE_HOST = "tel-apt-cache.canonical.com"
 APT_PROXY_CONF_PATH = "/etc/apt/apt.conf.d/02proxy"
 PROXY_PORT = 3142
 
+#: Environment variable that replaces :data:`DEFAULT_DIRECT_HOSTS` (comma
+#: separated; empty means "no exceptions").
+DIRECT_HOSTS_ENV = "APT_CACHE_DIRECT_HOSTS"
 
-def generate_proxy_config(cache_host: str) -> str:
+#: Repositories the DUT must fetch itself.
+#:
+#: ``dl.google.com`` publishes an ``http://`` URL that redirects to HTTPS, which
+#: the HTTP-only cache cannot follow, and the cache unit cannot reach it at all;
+#: ``developer.download.nvidia.com`` (the CUDA repository) fails the same way.
+#: Every other repository keeps going through the cache.
+DEFAULT_DIRECT_HOSTS = ("dl.google.com", "developer.download.nvidia.com")
+
+
+def generate_proxy_config(cache_host: str, direct_hosts=DEFAULT_DIRECT_HOSTS) -> str:
     """Return the contents of the apt proxy configuration file.
 
     HTTP traffic is routed through ``cache_host`` on port :data:`PROXY_PORT`.
-    HTTPS traffic is set to ``DIRECT`` (not cached).
+    HTTPS traffic is set to ``DIRECT`` (not cached). Every host in
+    ``direct_hosts`` gets its own ``Acquire::http::Proxy::<host> "DIRECT"`` line,
+    so the DUT fetches it itself — the only way a repository that redirects to
+    HTTPS, or that the cache cannot reach, can work.
     """
-    return (
-        f'Acquire::http::Proxy "http://{cache_host}:{PROXY_PORT}";\n'
-        f'Acquire::https::Proxy "DIRECT";\n'
-    )
+    lines = [
+        f'Acquire::http::Proxy "http://{cache_host}:{PROXY_PORT}";',
+        'Acquire::https::Proxy "DIRECT";',
+    ]
+    for host in direct_hosts or ():
+        host = host.strip()
+        if host:
+            lines.append(f'Acquire::http::Proxy::{host} "DIRECT";')
+    return "\n".join(lines) + "\n"
 
 
 def is_ubuntu_core(os_id: str) -> bool:
@@ -51,12 +81,26 @@ def is_ubuntu_core(os_id: str) -> bool:
     return os_id.strip() == "ubuntu-core"
 
 
-def enable_proxy(device: LabDevice, cache_host: str) -> None:
+def direct_hosts_from_env(value, *, default=DEFAULT_DIRECT_HOSTS) -> tuple:
+    """Parse ``APT_CACHE_DIRECT_HOSTS``.
+
+    Unset keeps the defaults; an empty string means "no exceptions", so an
+    operator can turn the whole mechanism off without editing code.
+    """
+    if value is None:
+        return tuple(default)
+    return tuple(host.strip() for host in str(value).split(",") if host.strip())
+
+
+def enable_proxy(device: LabDevice, cache_host: str, direct_hosts=None) -> None:
     """Write the apt proxy configuration file on ``device``."""
     print(f"Setting up apt-cache proxy ({cache_host}:{PROXY_PORT}) on {device.host}...")
 
     # Write proxy config atomically in a single run
-    config = generate_proxy_config(cache_host)
+    config = generate_proxy_config(
+        cache_host,
+        DEFAULT_DIRECT_HOSTS if direct_hosts is None else direct_hosts,
+    )
     result = device.run(
         f"sudo tee {APT_PROXY_CONF_PATH} >/dev/null",
         in_stream=io.StringIO(config),
@@ -100,6 +144,7 @@ def main():
     args = parser.parse_args()
 
     cache_host = os.environ.get("APT_CACHE_HOST", DEFAULT_APT_CACHE_HOST)
+    direct_hosts = direct_hosts_from_env(os.environ.get(DIRECT_HOSTS_ENV))
 
     try:
         device = LabDevice()
@@ -124,7 +169,7 @@ def main():
     if args.action == "disable":
         disable_proxy(device)
     else:
-        enable_proxy(device, cache_host)
+        enable_proxy(device, cache_host, direct_hosts)
 
 
 if __name__ == "__main__":
