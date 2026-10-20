@@ -38,9 +38,7 @@ def test_generate_proxy_config_pins_the_repositories_the_cache_cannot_serve():
     """
     config = generate_proxy_config("example.com")
     assert 'Acquire::http::Proxy::dl.google.com "DIRECT";' in config
-    assert (
-        'Acquire::http::Proxy::developer.download.nvidia.com "DIRECT";' in config
-    )
+    assert 'Acquire::http::Proxy::developer.download.nvidia.com "DIRECT";' in config
     assert config.count("\n") == 2 + len(DEFAULT_DIRECT_HOSTS)
 
 
@@ -138,9 +136,7 @@ def test_main_writes_the_direct_exceptions(mocker, capsys, monkeypatch):
     assert 'Acquire::http::Proxy "http://tel-apt-cache.canonical.com:3142";' in written
     assert 'Acquire::https::Proxy "DIRECT";' in written
     assert 'Acquire::http::Proxy::dl.google.com "DIRECT";' in written
-    assert (
-        'Acquire::http::Proxy::developer.download.nvidia.com "DIRECT";' in written
-    )
+    assert 'Acquire::http::Proxy::developer.download.nvidia.com "DIRECT";' in written
 
 
 def test_main_honours_an_override_of_the_exception_list(mocker, capsys, monkeypatch):
