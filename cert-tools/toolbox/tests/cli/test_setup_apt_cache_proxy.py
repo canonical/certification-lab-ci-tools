@@ -30,15 +30,15 @@ def test_generate_proxy_config_custom_host():
 
 
 def test_generate_proxy_config_pins_the_repositories_the_cache_cannot_serve():
-    """dl.google.com and the CUDA repository must be fetched by the DUT itself.
+    """dl.google.com must be fetched by the DUT itself.
 
-    The cache is HTTP-only, so it cannot follow their redirect to HTTPS, and it
-    cannot reach them at all; APT keys proxy exceptions by host, so this is the
-    only granularity available.
+    The cache is HTTP-only, so it cannot follow the repository's redirect to
+    HTTPS, and it cannot reach the host at all; APT keys proxy exceptions by
+    host, so this is the only granularity available.
     """
     config = generate_proxy_config("example.com")
     assert 'Acquire::http::Proxy::dl.google.com "DIRECT";' in config
-    assert 'Acquire::http::Proxy::developer.download.nvidia.com "DIRECT";' in config
+    assert DEFAULT_DIRECT_HOSTS == ("dl.google.com",)
     assert config.count("\n") == 2 + len(DEFAULT_DIRECT_HOSTS)
 
 
@@ -140,7 +140,6 @@ def test_main_writes_the_direct_exceptions(mocker, capsys, monkeypatch):
     assert 'Acquire::http::Proxy "http://tel-apt-cache.canonical.com:3142";' in written
     assert 'Acquire::https::Proxy "DIRECT";' in written
     assert 'Acquire::http::Proxy::dl.google.com "DIRECT";' in written
-    assert 'Acquire::http::Proxy::developer.download.nvidia.com "DIRECT";' in written
 
 
 def test_main_honours_an_override_of_the_exception_list(mocker, capsys, monkeypatch):

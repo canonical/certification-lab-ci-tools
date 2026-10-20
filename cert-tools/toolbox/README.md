@@ -294,11 +294,10 @@ tests are not aborted. The `DEVICE_IP` (and optionally `DEVICE_USER` /
 `DEVICE_PWD`) environment variables configure the SSH connection. The
 `APT_CACHE_HOST` environment variable can override the default cache host.
 
-Two repositories are fetched by the DUT itself instead of through the cache:
+One repository is fetched by the DUT itself instead of through the cache:
 
 * `dl.google.com` — its `http://` URL redirects to HTTPS, which the HTTP-only
-  cache cannot follow, and the cache unit cannot reach it at all;
-* `developer.download.nvidia.com` — the CUDA repository, which fails the same way.
+  cache cannot follow, and the cache unit cannot reach it at all.
 
 APT keys proxy exceptions by host (there is no per-path setting), so the
 generated file contains `Acquire::http::Proxy::<host> "DIRECT";` for each.

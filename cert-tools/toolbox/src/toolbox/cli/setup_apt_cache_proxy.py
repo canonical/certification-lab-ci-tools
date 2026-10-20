@@ -16,13 +16,12 @@ authentication is used when ``DEVICE_PWD`` is set.
 The cache host defaults to ``tel-apt-cache.canonical.com`` and can be overridden
 via the ``APT_CACHE_HOST`` environment variable.
 
-Some repositories cannot be served by the cache and must be fetched by the DUT
-itself: the cache speaks HTTP only (so a repository that publishes an ``http://``
-URL and redirects to HTTPS can never be completed for the client), and the cache
-unit's egress does not reach every host. Those are pinned to ``DIRECT`` with
-``Acquire::http::Proxy::<host>`` — the finest granularity APT offers, since it
-keys proxies by host and not by path. :data:`DEFAULT_DIRECT_HOSTS` lists the hosts
-the lab hit; ``APT_CACHE_DIRECT_HOSTS`` (comma separated, empty to disable)
+A repository that publishes an ``http://`` URL and redirects to HTTPS can never
+be completed by the cache — it speaks HTTP only — and the cache unit cannot reach
+every host either. Such hosts are pinned to ``DIRECT`` with
+``Acquire::http::Proxy::<host>``, the finest granularity APT offers: it keys
+proxies by host, not by path. :data:`DEFAULT_DIRECT_HOSTS` starts with the one
+host the lab hit; ``APT_CACHE_DIRECT_HOSTS`` (comma separated, empty to disable)
 replaces the list per run.
 
 A source written in the legacy ``http://HTTPS///host/path`` form is NOT rewritten
@@ -55,14 +54,11 @@ DIRECT_HOSTS_ENV = "APT_CACHE_DIRECT_HOSTS"
 #: Repositories the DUT must fetch itself.
 #:
 #: ``dl.google.com`` publishes an ``http://`` URL that redirects to HTTPS, which
-#: the HTTP-only cache cannot follow, and the cache unit cannot reach it at all;
-#: ``developer.download.nvidia.com`` (the CUDA repository) fails the same way.
-#: Every other repository keeps going through the cache.
-DEFAULT_DIRECT_HOSTS = (
-    "dl.google.com",
-    "developer.download.nvidia.com",
-    "repo.download.nvidia.com",
-)
+#: the HTTP-only cache cannot follow, and the cache unit cannot reach it at all.
+#: Every other repository keeps going through the cache — including the legacy
+#: ``http://HTTPS///host/path`` sources (NVIDIA's Jetson drop-in), which need
+#: egress from the cache rather than a client-side exception.
+DEFAULT_DIRECT_HOSTS = ("dl.google.com",)
 
 
 def generate_proxy_config(cache_host: str, direct_hosts=DEFAULT_DIRECT_HOSTS) -> str:
