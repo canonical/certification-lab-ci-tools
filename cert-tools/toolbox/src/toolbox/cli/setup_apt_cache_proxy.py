@@ -53,7 +53,18 @@ DIRECT_HOSTS_ENV = "APT_CACHE_DIRECT_HOSTS"
 #: the HTTP-only cache cannot follow, and the cache unit cannot reach it at all;
 #: ``developer.download.nvidia.com`` (the CUDA repository) fails the same way.
 #: Every other repository keeps going through the cache.
-DEFAULT_DIRECT_HOSTS = ("dl.google.com", "developer.download.nvidia.com")
+DEFAULT_DIRECT_HOSTS = (
+    "dl.google.com",
+    "developer.download.nvidia.com",
+    "repo.download.nvidia.com",
+)
+
+#: Obsolete way of asking an HTTP proxy to tunnel TLS: apt sends
+#: ``http://HTTPS///host/path`` and expects the proxy to open a TLS connection.
+#: apt-cacher-ng answers 500 to it, and the repository is reachable over plain
+#: HTTPS from the DUT, so the form is rewritten to ``https://`` (which the
+#: client configuration already sends DIRECT).
+HTTPS_TUNNEL_PREFIX = "http://HTTPS///"
 
 
 def generate_proxy_config(cache_host: str, direct_hosts=DEFAULT_DIRECT_HOSTS) -> str:
@@ -92,6 +103,52 @@ def direct_hosts_from_env(value, *, default=DEFAULT_DIRECT_HOSTS) -> tuple:
     return tuple(host.strip() for host in str(value).split(",") if host.strip())
 
 
+def https_sources_command() -> str:
+    """Shell command that rewrites ``http://HTTPS///`` sources to ``https://``.
+
+    It prints one path per file it rewrote, so the caller can report what
+    changed; files are read with ``sudo`` because the vendor drop-ins are
+    root-owned and not world readable.
+    """
+    roots = (
+        "/etc/apt/sources.list "
+        "/etc/apt/sources.list.d/*.list "
+        "/etc/apt/sources.list.d/*.sources"
+    )
+    return (
+        f"for f in {roots}; do "
+        '[ -f "$f" ] || continue; '
+        f"sudo grep -q '{HTTPS_TUNNEL_PREFIX}' \"$f\" 2>/dev/null || continue; "
+        f'sudo sed -i \'s|{HTTPS_TUNNEL_PREFIX}|https://|g\' "$f" && echo "$f"; '
+        "done"
+    )
+
+
+def rewrite_https_tunnel_sources(device: LabDevice) -> list:
+    """Point ``http://HTTPS///`` sources at ``https://``; return the files changed.
+
+    Left alone, every fetch for such a repository is a 500 from the cache and a
+    failed ``apt update`` ("repository is not signed" in apt's own words). The
+    HTTPS URL is what the source always meant, and the client configuration
+    already sends HTTPS direct, so nothing else has to change.
+    """
+    result = device.run(https_sources_command())
+    if result.failed:
+        print(
+            f"WARNING: could not check for http://HTTPS/// sources on {device.host}"
+            " — leaving them untouched"
+        )
+        return []
+    changed = [
+        line.strip() for line in (result.stdout or "").splitlines() if line.strip()
+    ]
+    if changed:
+        print(
+            f"Rewrote obsolete HTTPS-tunnel sources on {device.host}: {', '.join(changed)}"
+        )
+    return changed
+
+
 def enable_proxy(device: LabDevice, cache_host: str, direct_hosts=None) -> None:
     """Write the apt proxy configuration file on ``device``."""
     print(f"Setting up apt-cache proxy ({cache_host}:{PROXY_PORT}) on {device.host}...")
@@ -111,6 +168,8 @@ def enable_proxy(device: LabDevice, cache_host: str, direct_hosts=None) -> None:
             f"on {device.host} — skipping"
         )
         sys.exit(0)
+
+    rewrite_https_tunnel_sources(device)
 
     print("Done.")
 

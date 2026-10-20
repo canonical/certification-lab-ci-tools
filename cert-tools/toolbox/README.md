@@ -305,6 +305,12 @@ generated file contains `Acquire::http::Proxy::<host> "DIRECT";` for each.
 `APT_CACHE_DIRECT_HOSTS` (comma separated) replaces the list for one run, and an
 empty value disables the exceptions entirely.
 
+Sources written in the obsolete `http://HTTPS///host/...` form (NVIDIA's Jetson
+drop-in does this) are rewritten to `https://host/...` when the proxy is enabled:
+that form asks the HTTP proxy to tunnel TLS, which this cache answers with a 500,
+while the plain HTTPS URL works — and HTTPS is already sent `DIRECT`. The script
+prints every file it rewrote.
+
 An optional `action` argument selects what to do: `enable` (the default)
 writes `/etc/apt/apt.conf.d/02proxy`, while `disable` removes it so the DUT
 no longer uses the proxy.

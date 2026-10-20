@@ -8,8 +8,10 @@ from toolbox.cli.setup_apt_cache_proxy import (
     DEFAULT_DIRECT_HOSTS,
     direct_hosts_from_env,
     generate_proxy_config,
+    https_sources_command,
     is_ubuntu_core,
     main,
+    rewrite_https_tunnel_sources,
 )
 
 # ---------------------------------------------------------------------------
@@ -99,8 +101,10 @@ def _patch_device(mocker, os_result, write_result=None):
     """
     device = mocker.Mock()
     device.host = "10.0.0.1"
+    # The third call looks for http://HTTPS/// sources and rewrites them.
+    untouched = Result(stdout="", exited=0)
     if write_result is not None:
-        device.run.side_effect = [os_result, write_result]
+        device.run.side_effect = [os_result, write_result, untouched]
     else:
         device.run.side_effect = [os_result]
     mocker.patch.object(setup_apt_cache_proxy, "LabDevice", return_value=device)
@@ -132,7 +136,11 @@ def test_main_writes_the_direct_exceptions(mocker, capsys, monkeypatch):
 
     main()
 
-    written = device.run.call_args_list[-1].kwargs["in_stream"].getvalue()
+    written = next(
+        call.kwargs["in_stream"].getvalue()
+        for call in device.run.call_args_list
+        if "in_stream" in call.kwargs
+    )
     assert 'Acquire::http::Proxy "http://tel-apt-cache.canonical.com:3142";' in written
     assert 'Acquire::https::Proxy "DIRECT";' in written
     assert 'Acquire::http::Proxy::dl.google.com "DIRECT";' in written
@@ -147,7 +155,11 @@ def test_main_honours_an_override_of_the_exception_list(mocker, capsys, monkeypa
 
     main()
 
-    written = device.run.call_args_list[-1].kwargs["in_stream"].getvalue()
+    written = next(
+        call.kwargs["in_stream"].getvalue()
+        for call in device.run.call_args_list
+        if "in_stream" in call.kwargs
+    )
     assert 'Acquire::http::Proxy::only.example.com "DIRECT";' in written
     assert "dl.google.com" not in written
 
@@ -162,6 +174,50 @@ def test_main_uses_custom_cache_host_from_env(mocker, capsys, monkeypatch):
 
     out = capsys.readouterr().out
     assert "my-cache.example.com" in out
+
+
+# ---------------------------------------------------------------------------
+# http://HTTPS/// sources
+# ---------------------------------------------------------------------------
+
+
+def test_https_sources_command_rewrites_the_tunnel_prefix():
+    """The obsolete "proxy, please tunnel TLS" form is a 500 from this cache."""
+    command = https_sources_command()
+    assert "http://HTTPS///" in command
+    assert "https://" in command
+    assert "sources.list.d" in command
+
+
+def test_rewriting_tunnel_sources_reports_the_files_it_changed(mocker, capsys):
+    device = mocker.Mock()
+    device.host = "10.0.0.1"
+    device.run.return_value = Result(
+        stdout="/etc/apt/sources.list.d/nvidia-l4t-apt-source.list\n", exited=0
+    )
+
+    changed = rewrite_https_tunnel_sources(device)
+
+    assert changed == ["/etc/apt/sources.list.d/nvidia-l4t-apt-source.list"]
+    assert "nvidia-l4t-apt-source.list" in capsys.readouterr().out
+
+
+def test_rewriting_tunnel_sources_is_silent_when_there_is_nothing_to_do(mocker, capsys):
+    device = mocker.Mock()
+    device.host = "10.0.0.1"
+    device.run.return_value = Result(stdout="", exited=0)
+
+    assert rewrite_https_tunnel_sources(device) == []
+    assert capsys.readouterr().out == ""
+
+
+def test_rewriting_tunnel_sources_warns_and_changes_nothing_on_failure(mocker, capsys):
+    device = mocker.Mock()
+    device.host = "10.0.0.1"
+    device.run.return_value = Result(stdout="", exited=255)
+
+    assert rewrite_https_tunnel_sources(device) == []
+    assert "WARNING" in capsys.readouterr().out
 
 
 # ---------------------------------------------------------------------------
