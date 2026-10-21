@@ -32,7 +32,7 @@ UBUNTU_RELEASE = 25
 DEFAULT_KEYRING_DIR = "/etc/apt/keyrings"
 
 
-def neatly_run_command(cmd: list[str]) -> str:
+def neatly_run_command(cmd: list) -> str:
     """
     This command tries to run command and if the command fails it will log the
     error and exit the program.
@@ -117,13 +117,11 @@ def create_apt_auth_file(ppa: str, login: str, password: str) -> None:
     """
     host, path = parse_ppa_url(ppa)
     ppa_name = slugify(path)
-    contents = textwrap.dedent(
-        """
+    contents = textwrap.dedent("""
         machine {}
         login {}
         password {}
-        """
-    ).format(f"{host}/{path}", login, password)
+        """).format(f"{host}/{path}", login, password)
 
     auth_file_path = f"/etc/apt/auth.conf.d/ppa-{ppa_name}.conf"
     if os.path.exists(auth_file_path):
@@ -166,7 +164,7 @@ def parse_ppa_url(url: str) -> str:
     return host, path[1:]
 
 
-def add_ppa_to_sources_list(ppa: str, keyring_file: str | None) -> None:
+def add_ppa_to_sources_list(ppa: str, keyring_file: str):
     """
     Add the PPA to the sources.list file.
 
@@ -179,19 +177,17 @@ def add_ppa_to_sources_list(ppa: str, keyring_file: str | None) -> None:
     release_codename = guess_ubuntu_codename()
     release = guess_ubuntu_release()
     if release >= UBUNTU_RELEASE and keyring_file:
-        contents = textwrap.dedent(
-            """
+        contents = textwrap.dedent("""
             deb [signed-by={keyring_file}] {ppa} {release_codename} main
             deb-src [signed-by={keyring_file}] {ppa} {release_codename} main
-            """
-        ).format(keyring_file=keyring_file, ppa=ppa, release_codename=release_codename)
+            """).format(
+            keyring_file=keyring_file, ppa=ppa, release_codename=release_codename
+        )
     else:
-        contents = textwrap.dedent(
-            """
+        contents = textwrap.dedent("""
             deb {ppa} {release_codename} main
             deb-src {ppa} {release_codename} main
-            """
-        ).format(ppa=ppa, release_codename=release_codename)
+            """).format(ppa=ppa, release_codename=release_codename)
 
     if os.path.exists(sources_list_file):
         logging.warning("Sources list file already exists: %s", sources_list_file)
@@ -202,7 +198,7 @@ def add_ppa_to_sources_list(ppa: str, keyring_file: str | None) -> None:
         logging.info("Created sources list file: %s", sources_list_file)
 
 
-def add_ppa_key(key: str) -> str | None:
+def add_ppa_key(key: str) -> str:
     """
     Add the PPA's key to the system.
 
