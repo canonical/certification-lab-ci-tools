@@ -3,6 +3,8 @@ This module contains every utility function shared among multiple
 scripts that fetches information about snaps
 """
 
+import sys
+
 import requests
 
 try:
@@ -113,6 +115,13 @@ def get_revision_at_offset(version_str: str, repo_path: str):
     try:
         return history[offset]
     except IndexError:
-        raise SystemExit(
-            f"Unable to locate the commit that generated version: {version_str}"
+        # raise SystemExit(
+        # Hotfix: current version in the PPA is out of sync with history
+        #         probably pushed from a branch
+        print(
+            f"Unable to locate the commit that generated version: {version_str}",
+            file=sys.stderr,
         )
+        print("Installing HEAD, this may not work", file=sys.stderr)
+        return history[-1]
+        # )
