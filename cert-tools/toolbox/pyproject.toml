@@ -31,7 +31,6 @@ add-kernel-ppa = "toolbox.cli.add_kernel_ppa:main"
 refresh-google-signing-key = "toolbox.cli.refresh_google_signing_key:main"
 ensure-stable-snaps = "toolbox.cli.ensure_stable_snaps:main"
 setup_apt_cache_proxy = "toolbox.cli.setup_apt_cache_proxy:main"
-disable-retired-apt-sources = "toolbox.cli.disable_retired_apt_sources:main"
 # deprecated, used by the bash version of install_checkbox_snaps
 snap_connections = "toolbox.snap_connections:main"
 

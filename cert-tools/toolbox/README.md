@@ -229,7 +229,6 @@ ensure-kernel = "toolbox.cli.ensure_kernel:main"
 add-kernel-ppa = "toolbox.cli.add_kernel_ppa:main"
 refresh-google-signing-key = "toolbox.cli.refresh_google_signing_key:main"
 setup_apt_cache_proxy = "toolbox.cli.setup_apt_cache_proxy:main"
-disable-retired-apt-sources = "toolbox.cli.disable_retired_apt_sources:main"
 ```
 
 ### `ensure-kernel`
@@ -329,44 +328,6 @@ APT_CACHE_DIRECT_HOSTS= DEVICE_IP=<dut-ip> setup_apt_cache_proxy
 # Remove the proxy configuration from the DUT
 DEVICE_IP=<dut-ip> setup_apt_cache_proxy disable
 ```
-
-### `disable-retired-apt-sources`
-
-Disables APT sources that point at an archive which no longer exists upstream.
-`archive.canonical.com` (the *partner* component of bionic, focal and xenial)
-is the current case: the line ships in the OEM images that the lab
-reprovisions, comes back after every provisioning, and makes `apt-get update`
-abort before any test runs:
-
-```
-E: Failed to fetch http://archive.canonical.com/ubuntu/dists/focal/InRelease  500  Remote or cache error [IP: 10.15.22.2 3142]
-E: The repository 'http://archive.canonical.com/ubuntu focal InRelease' is no longer signed.
-```
-
-The device's source files are read over SSH, the cleaned content is computed on
-the agent, and a file is written back only when something changed:
-
-* one-line files (`sources.list`, `sources.list.d/*.list`) get the offending
-  entry commented out, with a `# disabled: retired upstream (…)` marker above
-  it;
-* deb822 files (`sources.list.d/*.sources`) get `Enabled: no` in the stanza
-  that references a retired host.
-
-Only the exact retired hosts are touched: `oem.archive.canonical.com` and
-`dell.archive.canonical.com` are still served and must keep working. The
-operation is idempotent, and read/write failures are reported without aborting
-the run.
-
-```bash
-# DEVICE_IP (and optionally DEVICE_USER / DEVICE_PWD) must be set
-DEVICE_IP=<dut-ip> disable-retired-apt-sources
-
-# Report what would change, without writing
-DEVICE_IP=<dut-ip> disable-retired-apt-sources --dry-run
-```
-
-The retired hosts are listed in `RETIRED_HOSTS`; add a host there when another
-archive is retired.
 
 ## Testing locally with `multipass`
 
