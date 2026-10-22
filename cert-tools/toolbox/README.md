@@ -229,6 +229,7 @@ ensure-kernel = "toolbox.cli.ensure_kernel:main"
 add-kernel-ppa = "toolbox.cli.add_kernel_ppa:main"
 refresh-google-signing-key = "toolbox.cli.refresh_google_signing_key:main"
 setup_apt_cache_proxy = "toolbox.cli.setup_apt_cache_proxy:main"
+disable-retired-apt-sources = "toolbox.cli.disable_retired_apt_sources:main"
 ```
 
 ### `ensure-kernel`
@@ -327,6 +328,22 @@ APT_CACHE_DIRECT_HOSTS= DEVICE_IP=<dut-ip> setup_apt_cache_proxy
 
 # Remove the proxy configuration from the DUT
 DEVICE_IP=<dut-ip> setup_apt_cache_proxy disable
+```
+
+### `disable-retired-apt-sources`
+
+Comments out apt sources that point at an archive which no longer exists, so
+`apt-get update` does not fail on them before a test run. The focal OEM images
+ship `deb http://archive.canonical.com/ubuntu focal partner`, and that archive
+is retired.
+
+Only the hosts in `RETIRED_HOSTS` are matched, by host name, so
+`oem.archive.canonical.com` and `dell.archive.canonical.com` keep working. The
+file is written only when something changed, and the command reports how many
+entries it disabled.
+
+```bash
+DEVICE_IP=<dut-ip> disable-retired-apt-sources
 ```
 
 ## Testing locally with `multipass`
