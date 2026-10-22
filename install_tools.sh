@@ -83,6 +83,15 @@ add_to_path ~/.local/bin
 log "Installing agent dependencies"
 install_packages pipx python3-venv sshpass jq lsb-release python3-requests > /dev/null
 
+if [ "$(uname -m)" = "s390x" ]; then
+    log "Installing additional agent dependencies for s390x"
+    install_packages pkg-config libssl-dev build-essential > /dev/null
+
+    log "Installing rust toolchain from source"
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+    source "$HOME/.cargo/env"
+fi
+
 log "Installing agent tools"
 pipx install $TOOLS_PATH/cert-tools/launcher --force
 pipx install $TOOLS_PATH/cert-tools/toolbox --force
