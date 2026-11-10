@@ -179,3 +179,9 @@ Some of these are used under the hood by the scripts that are described here.
 Others are simply used in other workflows.
 However, the scripts in this overview provide the essential functionality
 for performing scripted testing.
+
+## Contribute to certification-lab-ci-tools
+
+This repository is open source. Contributions are welcome.
+
+If you're interested, start with the [contribution guide](CONTRIBUTING.md).
