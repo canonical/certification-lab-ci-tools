@@ -9,7 +9,7 @@
 [[ "$-" == *x* ]] && TRACING=true && set +x || TRACING=false
 
 BRANCH_DEFAULT=main
-TOOLS_REPO=https://github.com/canonical/hwcert-jenkins-tools.git
+TOOLS_REPO=https://github.com/canonical/certification-lab-ci-tools.git
 TOOLS_PATH_DEFAULT=$(basename $TOOLS_REPO .git)
 export TOOLS_PATH_DEVICE=".scriptlets"
 
@@ -84,10 +84,11 @@ log "Installing agent dependencies"
 install_packages pipx python3-venv sshpass jq lsb-release python3-requests > /dev/null
 
 log "Installing agent tools"
-pipx install $TOOLS_PATH/cert-tools/launcher --force
-pipx install $TOOLS_PATH/cert-tools/toolbox --force
-pipx install $TOOLS_PATH/cert-tools/snapstore --force
-pipx inject toolbox $TOOLS_PATH/cert-tools/snapstore --force
+command -v uv >/dev/null 2>&1 || pipx install uv
+uv tool install $TOOLS_PATH/cert-tools/launcher --force
+uv tool install $TOOLS_PATH/cert-tools/snapstore --force
+uv tool install $TOOLS_PATH/cert-tools/toolbox --force \
+    --with ${TOOLS_PATH}/cert-tools/snapstore
 
 # grab DEVICE_USER from the scenario file, if possible
 # (generally, a non-default DEVICE_USER needs to be set
