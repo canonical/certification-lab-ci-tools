@@ -215,7 +215,7 @@ def add_ppa_key(key: str) -> str:
             "apt-key",
             "adv",
             "--keyserver",
-            "keyserver.ubuntu.com",
+            "hkp://keyserver.ubuntu.com:80",
             "--recv-keys",
             key,
         ]
