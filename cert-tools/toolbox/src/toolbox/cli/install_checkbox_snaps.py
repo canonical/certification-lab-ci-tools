@@ -37,6 +37,11 @@ def main():
         action="store_true",
         help="Skip local installation of Checkbox from source on the controller",
     )
+    parser.add_argument(
+        "--controller-ref",
+        help="Git ref of Checkbox to install on the controller, "
+        "instead of the commit matching the device version",
+    )
     args = parser.parse_args()
 
     frontends = [SnapSpecifier.from_string(args.frontend)] + [
@@ -57,7 +62,10 @@ def main():
         snapstore=SnapstoreClient(create_base_client(TOKEN_ENVIRONMENT_VARIABLE)),
         predicates=[Blacklist.from_file(args.blacklist)] if args.blacklist else None,
     )
-    installer.install(skip_controller_install=args.skip_controller_install)
+    installer.install(
+        skip_controller_install=args.skip_controller_install,
+        controller_ref=args.controller_ref,
+    )
 
 
 if __name__ == "__main__":

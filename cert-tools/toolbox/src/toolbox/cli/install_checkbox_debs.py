@@ -21,6 +21,11 @@ def main():
         nargs="+",
         help="Specify additional provider packages",
     )
+    parser.add_argument(
+        "--controller-ref",
+        help="Git ref of Checkbox to install on the controller, "
+        "instead of the commit matching the device version",
+    )
     args = parser.parse_args()
 
     device = LabDevice(interfaces=[DebInterface()])
@@ -30,7 +35,7 @@ def main():
         risk=Risk(args.risk),
         providers=args.providers,
     )
-    installer.install()
+    installer.install(controller_ref=args.controller_ref)
 
 
 if __name__ == "__main__":

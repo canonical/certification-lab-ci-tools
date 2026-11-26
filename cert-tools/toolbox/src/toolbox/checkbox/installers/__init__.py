@@ -71,15 +71,26 @@ class CheckboxInstaller(ABC):
             )
         return result.stdout.strip()
 
-    def install_from_source_on_agent(self, version: str):
-        """Install matching Checkbox version from source on the agent using pipx."""
-        logger.info(
-            "Installing Checkbox %s on the agent container from source",
-            version,
-        )
-        commit = CheckboxVersionHelper().get_commit_for_version(
-            version, self.get_checkbox_major()
-        )
+    def install_from_source_on_agent(self, version: str, ref: str | None = None):
+        """Install Checkbox from source on the agent using pipx.
+
+        By default the commit matching the given version is used. If
+        any git ref is provided, it is used instead and the version lookup is skipped.
+        """
+        if ref:
+            logger.info(
+                "Installing Checkbox from ref '%s' on the agent container",
+                ref,
+            )
+            commit = ref
+        else:
+            logger.info(
+                "Installing Checkbox %s on the agent container from source",
+                version,
+            )
+            commit = CheckboxVersionHelper().get_commit_for_version(
+                version, self.get_checkbox_major()
+            )
         result = self.agent.run(
             [
                 "pipx",
@@ -98,8 +109,18 @@ class CheckboxInstaller(ABC):
         """Install Checkbox on the device."""
         raise NotImplementedError
 
-    def install(self, *args, skip_controller_install: bool = False, **kwargs):
-        """Install Checkbox on both device and agent, ensuring versions match."""
+    def install(
+        self,
+        *args,
+        skip_controller_install: bool = False,
+        controller_ref: str | None = None,
+        **kwargs,
+    ):
+        """Install Checkbox on both device and agent.
+
+        By default the agent gets the version matching the device. Use
+        `controller_ref` to install a specific git ref on the agent instead.
+        """
         self.install_on_device(*args, **kwargs)
         self.check_service()
         version = self.get_version()
@@ -109,4 +130,4 @@ class CheckboxInstaller(ABC):
                 " (--skip-controller-install)"
             )
         else:
-            self.install_from_source_on_agent(version)
+            self.install_from_source_on_agent(version, ref=controller_ref)
