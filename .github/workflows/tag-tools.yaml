@@ -1,0 +1,53 @@
+name: Create semantic version tag for the cert-tools and scriptlets
+permissions:
+  contents: read
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - cert-tools/**
+      - scriptlets/**
+      - install-tools.sh
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  auto-tag-cert-tools:
+    name: Create version tag for the cert-tools and scriptlets
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # necessary for writing tag
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0  # necessary for semantic versioning
+          filter: blob:none # exclude file contents for faster checkout
+          persist-credentials: true  # necessary for pushing tags
+
+      - name: Generate semantic version
+        id: version
+        uses: PaulHatch/semantic-version@5ae1354e589c5a67345fb2c6e65b025ff676d7c7  # v6.0.7
+        with:
+          tag_prefix: "v"
+          major_pattern: "/breaking(\\(.+\\))?:/"
+          minor_pattern: "/feat(\\(.+\\))?:/"
+          change_path: "cert-tools/ scriptlets/ install_tools.sh"
+          search_commit_body: true
+          enable_prerelease_mode: false
+
+      - name: Create and push tag
+        env:
+          TAG: ${{ steps.version.outputs.version_tag }}
+        run: |
+          echo ::group::Create tag
+          git tag "$TAG"
+          echo ::endgroup::
+          echo ::notice::"$TAG"
+          echo ::group::Push tag
+          git push origin $TAG
+          echo ::endgroup::
