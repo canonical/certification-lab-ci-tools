@@ -124,3 +124,76 @@ class TestRemoteHostRun:
 
         assert result.exited == 255
         assert result.command == "false"
+
+
+class TestRemoteHostPut:
+    """Tests for RemoteHost.put() method."""
+
+    @pytest.fixture
+    def connection(self, mocker):
+        connection = mocker.MagicMock(spec=Connection)
+        connection.__enter__.return_value = connection
+        connection.__exit__.return_value = False
+        connection.put.side_effect = lambda local, remote, **kwargs: mocker.Mock(
+            remote=remote
+        )
+        mocker.patch.object(RemoteHost, "create_connection", return_value=connection)
+        return connection
+
+    def test_copies_files_into_remote_dir_over_one_connection(self, connection):
+        """Every file lands in the remote directory under its own name."""
+        result = RemoteHost("example.com").put(
+            ["/local/retry", "/local/clean_machine"], ".scriptlets"
+        )
+
+        RemoteHost.create_connection.assert_called_once()
+        assert [call.args for call in connection.put.call_args_list] == [
+            ("/local/retry", ".scriptlets/retry"),
+            ("/local/clean_machine", ".scriptlets/clean_machine"),
+        ]
+        assert result.ok
+        assert result.stdout.splitlines() == [
+            ".scriptlets/retry",
+            ".scriptlets/clean_machine",
+        ]
+
+    def test_accepts_any_iterable(self, connection):
+        """A generator of paths is copied in full, not consumed by logging."""
+        paths = (path for path in ["/local/retry", "/local/clean_machine"])
+
+        result = RemoteHost("example.com").put(paths, ".scriptlets")
+
+        assert connection.put.call_count == 2
+        assert result.ok
+
+    def test_forwards_transfer_options(self, connection):
+        """Extra keyword arguments reach the underlying transfer."""
+        RemoteHost("example.com").put(
+            ["/local/retry"], ".scriptlets", preserve_mode=False
+        )
+
+        assert connection.put.call_args.kwargs == {"preserve_mode": False}
+
+    @pytest.mark.parametrize(
+        "error, message",
+        [
+            (
+                FileNotFoundError(2, "No such file or directory", "/local/retry"),
+                "/local/retry",
+            ),
+            (SSHException("Channel closed."), "Channel closed."),
+        ],
+    )
+    def test_transfer_error_returns_failed_result(self, connection, error, message):
+        """A failing transfer stops the copy and reports what went wrong."""
+        connection.put.side_effect = error
+
+        result = RemoteHost("example.com").put(
+            ["/local/retry", "/local/clean_machine"], ".scriptlets"
+        )
+
+        assert result.failed
+        assert result.exited == 255
+        assert message in result.stderr
+        connection.put.assert_called_once()
+        connection.__exit__.assert_called_once()
