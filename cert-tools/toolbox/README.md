@@ -230,6 +230,7 @@ add-kernel-ppa = "toolbox.cli.add_kernel_ppa:main"
 refresh-google-signing-key = "toolbox.cli.refresh_google_signing_key:main"
 setup_apt_cache_proxy = "toolbox.cli.setup_apt_cache_proxy:main"
 disable-retired-apt-sources = "toolbox.cli.disable_retired_apt_sources:main"
+prepare-dut = "toolbox.cli.prepare_dut:main"
 ```
 
 ### `ensure-kernel`
@@ -344,6 +345,27 @@ entries it disabled.
 
 ```bash
 DEVICE_IP=<dut-ip> disable-retired-apt-sources
+```
+
+### `prepare-dut`
+
+Prepares the device under test before running tests. For now, it only creates
+the remote scriptlets directory and copies the scriptlets the DUT needs. It
+exits with a non-zero status if the directory cannot be created or any file
+fails to copy.
+
+* `--local-path`: local directory containing the scriptlets; defaults to
+  `SCRIPTLETS_PATH`.
+* `--remote-path`: directory on the DUT to copy the scriptlets into; defaults
+  to `TOOLS_PATH_DEVICE`. Relative paths resolve from the user's home directory
+  and `~` is not expanded.
+
+```bash
+# DEVICE_IP (and optionally DEVICE_USER / DEVICE_PWD) must be set
+prepare-dut
+
+# Explicit paths
+prepare-dut --local-path ./scriptlets --remote-path .scriptlets
 ```
 
 ## Testing locally with `multipass`
