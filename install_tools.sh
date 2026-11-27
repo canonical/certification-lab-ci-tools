@@ -74,7 +74,7 @@ fi
 echo "Cloned $TOOLS_REPO@$BRANCH into local repo: $TOOLS_PATH"
 
 # add scriptlets to agent's PATH
-SCRIPTLETS_PATH=$TOOLS_PATH/scriptlets
+export SCRIPTLETS_PATH=$(realpath "$TOOLS_PATH/scriptlets")
 source "$SCRIPTLETS_PATH/defs/add_to_path"
 add_to_path $SCRIPTLETS_PATH
 add_to_path $SCRIPTLETS_PATH/sru-helpers

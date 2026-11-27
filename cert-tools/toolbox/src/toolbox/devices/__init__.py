@@ -2,6 +2,8 @@
 
 import io
 import logging
+import os
+import posixpath
 import shlex
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
@@ -108,3 +110,27 @@ class RemoteHost(Device):
                 return connection.run(command, warn=True, **kwargs)
             except (SSHException, Failure, ThreadException, OSError) as error:
                 return Result(command=command, exited=255, stderr=repr(error))
+
+    def put(self, local_paths: Iterable[str], remote_dir: str, **kwargs) -> Result:
+        """Copy files to a directory on the remote host over an SSH connection.
+
+        :param local_paths: Paths to the local files to copy.
+        :param remote_dir: Existing remote directory to copy the files into.
+        :return: Result object containing the outcome of the file transfer operation.
+        """
+        local_paths = list(local_paths)
+        command = f"put {' '.join(local_paths)} to {remote_dir}"
+        logger.debug(command)
+        with self.create_connection() as connection:
+            try:
+                remotes = [
+                    connection.put(
+                        local_path,
+                        posixpath.join(remote_dir, os.path.basename(local_path)),
+                        **kwargs,
+                    ).remote
+                    for local_path in local_paths
+                ]
+                return Result(command=command, stdout="\n".join(remotes), exited=0)
+            except (SSHException, OSError) as error:
+                return Result(command=command, exited=255, stderr=str(error))
